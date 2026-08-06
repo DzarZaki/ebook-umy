@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-kabut-50 text-kabut-800;
+    }
+
+    h1, h2, h3, h4 {
+        @apply font-display;
+    }
+}
+
+/* Menyembunyikan elemen Alpine sebelum siap (mencegah modal berkedip). */
+[x-cloak] {
+    display: none !important;
+}

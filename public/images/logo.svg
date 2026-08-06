@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Logo Pustaka Dosen">
+  <rect width="64" height="64" rx="10" fill="#2e211a"/>
+  <path d="M32 20c-5.5-3.8-12-5-19-4.2v27.5c7-.8 13.5.4 19 4.2V20Z" fill="#5f4231"/>
+  <path d="M32 20c5.5-3.8 12-5 19-4.2v27.5c-7-.8-13.5.4-19 4.2V20Z" fill="#f27522"/>
+  <path d="M32 20v27.5" stroke="#faf9f7" stroke-width="2" stroke-linecap="round"/>
+  <path d="M38 27.5c3-1.2 6-1.8 9-1.9M38 33.5c3-1.2 6-1.8 9-1.9" stroke="#762f11" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

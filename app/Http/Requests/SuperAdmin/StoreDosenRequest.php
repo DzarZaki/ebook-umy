@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Http\Requests\SuperAdmin;
+
+use App\Rules\EmailDosen;
+use App\Rules\PolaTeks;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
+
+/** Validasi pembuatan akun dosen oleh Super Admin. */
+class StoreDosenRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->isSuperAdmin() ?? false;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'min:3', 'max:120', PolaTeks::namaOrang()],
+            'email' => ['required', 'email', 'max:150', new EmailDosen, Rule::unique('users', 'email')],
+            'prodi_id' => ['required', 'integer', 'exists:prodi,id'],
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'name' => 'nama dosen',
+            'email' => 'email dosen',
+            'prodi_id' => 'program studi',
+            'password' => 'kata sandi',
+        ];
+    }
+}
