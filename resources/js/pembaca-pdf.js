@@ -16,6 +16,23 @@ const ASET_PDFJS = {
 	iccUrl: `${ASAL}/pdfjs/iccs/`,
 }
 
+/**
+ * Helper terpusat untuk semua POST JSON ke server.
+ * Selalu menyisipkan header X-CSRF-TOKEN dan Accept: application/json.
+ */
+async function postJson(url, csrf, body = {}) {
+	return fetch(url, {
+		method: 'POST',
+		credentials: 'same-origin',
+		headers: {
+			'Content-Type': 'application/json',
+			'X-CSRF-TOKEN': csrf,
+			Accept: 'application/json',
+		},
+		body: JSON.stringify(body),
+	})
+}
+
 /** Menyiapkan penampil PDF pada halaman baca. */
 async function siapkanPembaca(wadah) {
 	const data = wadah.dataset
@@ -71,7 +88,9 @@ async function siapkanPembaca(wadah) {
 		return
 	}
 
-	console.info('pdf.js siap. Versi:', pdfjsLib.version, '· Jumlah halaman:', dokumen.numPages)
+	if (import.meta.env.DEV) {
+		console.info('pdf.js siap. Versi:', pdfjsLib.version, '· Jumlah halaman:', dokumen.numPages)
+	}
 
 	if (totalHalaman) totalHalaman.textContent = dokumen.numPages
 	if (isianHalaman) isianHalaman.max = dokumen.numPages
@@ -109,7 +128,9 @@ async function siapkanPembaca(wadah) {
 
 			// Pemeriksaan bantu: memastikan halaman benar-benar berisi sesuatu.
 			const operasi = await halaman.getOperatorList()
-			console.info(`Halaman ${nomor} digambar. Jumlah operasi gambar:`, operasi.fnArray.length)
+			if (import.meta.env.DEV) {
+				console.info(`Halaman ${nomor} digambar. Jumlah operasi gambar:`, operasi.fnArray.length)
+			}
 
 			if (data.watermark) {
 				gambarWatermarkLayar(kanvas.width, kanvas.height)
@@ -142,6 +163,7 @@ async function siapkanPembaca(wadah) {
 	function keHalaman(nomor) {
 		halamanAktif = Math.min(Math.max(1, nomor), dokumen.numPages)
 		gambarHalaman(halamanAktif)
+		simpanProgres(halamanAktif, dokumen.numPages)
 	}
 
 	/** Memasang penangan klik hanya bila tombolnya benar-benar ada. */
@@ -177,6 +199,53 @@ async function siapkanPembaca(wadah) {
 	if (tombolUnduh) {
 		tombolUnduh.onclick = () => susunUnduhan(tombolUnduh, data, bytesAsli)
 	}
+
+	// Simpan kemajuan membaca setiap kali halaman berpindah (debounce 2 detik).
+	let timerProgres = null
+	let progresTertunda = null
+
+	function kirimProgres(payload) {
+		if (!data.urlProgres) return
+		fetch(data.urlProgres, {
+			method: 'POST',
+			credentials: 'same-origin',
+			keepalive: true,
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRF-TOKEN': data.csrf,
+				Accept: 'application/json',
+			},
+			body: JSON.stringify(payload),
+		}).catch((galat) => { if (import.meta.env.DEV) console.warn('Gagal simpan progres:', galat) })
+	}
+
+	function simpanProgres(nomor, total) {
+		if (!data.urlProgres) return
+		progresTertunda = { halaman: nomor, total }
+		clearTimeout(timerProgres)
+		timerProgres = setTimeout(() => {
+			kirimProgres(progresTertunda)
+			progresTertunda = null
+		}, 2000)
+	}
+
+	// Flush saat tab disembunyikan atau ditutup agar progres terakhir tidak hilang.
+	// sendBeacon tidak mendukung header CSRF, jadi dipakai fetch dengan keepalive: true.
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState === 'hidden' && progresTertunda) {
+			clearTimeout(timerProgres)
+			kirimProgres(progresTertunda)
+			progresTertunda = null
+		}
+	})
+
+	// Pasang tombol penanda bila ada di halaman.
+	pasangKlik('tombol-penanda', () => {
+		if (!data.urlPenanda) return
+		postJson(data.urlPenanda, data.csrf, { halaman: halamanAktif })
+			.then((res) => { if (res.status === 429 && import.meta.env.DEV) console.info('Penanda: terlalu banyak permintaan, dilewati.') })
+			.catch((galat) => console.warn('Gagal mengubah penanda:', galat))
+	})
 
 	keHalaman(1)
 }
@@ -240,15 +309,7 @@ async function susunUnduhan(tombol, data, bytesAsli) {
 		URL.revokeObjectURL(tautan.href)
 
 		// Catat ke server untuk keperluan statistik dosen.
-		await fetch(data.urlCatat, {
-			method: 'POST',
-			credentials: 'same-origin',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-CSRF-TOKEN': data.csrf,
-				Accept: 'application/json',
-			},
-		})
+		await postJson(data.urlCatat, data.csrf)
 
 		tombol.textContent = 'Berkas tersimpan'
 		setTimeout(() => { tombol.textContent = labelAwal }, 2500)

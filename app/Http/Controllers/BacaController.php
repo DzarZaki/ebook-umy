@@ -82,9 +82,13 @@ class BacaController extends Controller
             ->where('book_id', $buku->id)
             ->first();
 
+        $limit = $this->resolusiLimit($permintaan);
+        $penanda = $this->daftarPenanda($pengguna->id, $buku->id, $limit);
+
         return response()->json([
             'halamanTerakhir' => $progres?->last_page ?? 1,
-            'penanda' => $this->daftarPenanda($pengguna->id, $buku->id),
+            'penanda' => $penanda,
+            'penanda_total' => count($penanda),
         ]);
     }
 
@@ -142,18 +146,31 @@ class BacaController extends Controller
             ]);
         }
 
+        $limit = $this->resolusiLimit($permintaan);
+        $daftar = $this->daftarPenanda($pengguna->id, $buku->id, $limit);
+
         return response()->json([
-            'penanda' => $this->daftarPenanda($pengguna->id, $buku->id),
+            'penanda' => $daftar,
+            'penanda_total' => count($daftar),
         ]);
     }
 
-    /** Daftar nomor halaman yang ditandai, selalu urut dari kecil ke besar. */
-    private function daftarPenanda(int $penggunaId, int $bukuId): array
+    /** Daftar nomor halaman yang ditandai, selalu urut dari kecil ke besar, dibatasi $limit item. */
+    private function daftarPenanda(int $penggunaId, int $bukuId, int $limit = 100): array
     {
         return Bookmark::where('user_id', $penggunaId)
             ->where('book_id', $bukuId)
             ->orderBy('page')
+            ->limit($limit)
             ->pluck('page')
             ->all();
+    }
+
+    /** Membaca parameter ?limit= dari request; default 100, maksimum 500. */
+    private function resolusiLimit(Request $permintaan): int
+    {
+        $limit = (int) $permintaan->query('limit', 100);
+
+        return max(1, min($limit, 500));
     }
 }

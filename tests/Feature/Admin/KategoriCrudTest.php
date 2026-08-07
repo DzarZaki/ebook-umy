@@ -74,6 +74,69 @@ class KategoriCrudTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_slug_kategori_unik_dalam_satu_prodi(): void
+    {
+        $prodi = Prodi::factory()->create();
+        $dosen = User::factory()->admin($prodi)->create();
+
+        // POST pertama — slug dasar
+        $this->actingAs($dosen)
+            ->post('/admin/kategori', ['name' => 'Pemrograman Web', 'lingkup' => 'prodi'])
+            ->assertRedirect(route('admin.kategori.index'));
+
+        // POST kedua — nama identik, prodi sama → harus dapat sufiks -2
+        $this->actingAs($dosen)
+            ->post('/admin/kategori', ['name' => 'Pemrograman Web', 'lingkup' => 'prodi'])
+            ->assertRedirect(route('admin.kategori.index'));
+
+        $this->assertDatabaseHas('categories', ['slug' => 'pemrograman-web', 'prodi_id' => $prodi->id]);
+        $this->assertDatabaseHas('categories', ['slug' => 'pemrograman-web-2', 'prodi_id' => $prodi->id]);
+        $this->assertSame(2, Category::where('prodi_id', $prodi->id)->count());
+    }
+
+    public function test_slug_sama_boleh_lintas_prodi(): void
+    {
+        $prodiA = Prodi::factory()->create();
+        $prodiB = Prodi::factory()->create();
+        $dosenA = User::factory()->admin($prodiA)->create();
+        $dosenB = User::factory()->admin($prodiB)->create();
+
+        $this->actingAs($dosenA)
+            ->post('/admin/kategori', ['name' => 'Modul Ajar', 'lingkup' => 'prodi']);
+
+        $this->actingAs($dosenB)
+            ->post('/admin/kategori', ['name' => 'Modul Ajar', 'lingkup' => 'prodi']);
+
+        // Unique index bersifat komposit (prodi_id, slug), bukan global.
+        // Kedua prodi boleh punya slug yang sama.
+        $this->assertDatabaseHas('categories', ['slug' => 'modul-ajar', 'prodi_id' => $prodiA->id]);
+        $this->assertDatabaseHas('categories', ['slug' => 'modul-ajar', 'prodi_id' => $prodiB->id]);
+    }
+
+    public function test_slug_unik_saat_update(): void
+    {
+        $prodi = Prodi::factory()->create();
+        $dosen = User::factory()->admin($prodi)->create();
+
+        // Buat dua kategori berbeda
+        $this->actingAs($dosen)
+            ->post('/admin/kategori', ['name' => 'Artikel Ilmiah', 'lingkup' => 'prodi']);
+        $this->actingAs($dosen)
+            ->post('/admin/kategori', ['name' => 'Modul Praktikum', 'lingkup' => 'prodi']);
+
+        $kategoriB = Category::where('slug', 'modul-praktikum')->first();
+
+        // Rename kategori B menjadi nama yang sudah dipakai kategori A
+        $this->actingAs($dosen)
+            ->put(route('admin.kategori.update', $kategoriB), [
+                'name' => 'Artikel Ilmiah',
+            ])
+            ->assertRedirect(route('admin.kategori.index'));
+
+        // Slug harus jadi artikel-ilmiah-2, bukan error 500
+        $this->assertDatabaseHas('categories', ['id' => $kategoriB->id, 'slug' => 'artikel-ilmiah-2']);
+    }
+
     public function test_kategori_yang_dipakai_buku_tidak_dapat_dihapus(): void
     {
         $prodi = Prodi::factory()->create();

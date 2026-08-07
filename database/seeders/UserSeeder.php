@@ -13,9 +13,21 @@ class UserSeeder extends Seeder
 {
     /**
      * Menjalankan seeder.
+     *
+     * // HANYA UNTUK DEVELOPMENT — jangan dipakai di production.
      */
     public function run(): void
     {
+        // Guard: tolak eksekusi di production kecuali ada flag eksplisit.
+        if (app()->environment('production') && ! app()->runningUnitTests()) {
+            $this->command?->error('UserSeeder ditolak di environment production. Gunakan --force bila benar-benar disengaja.');
+
+            return;
+        }
+
+        // HANYA UNTUK DEVELOPMENT — jangan dipakai di production.
+        $password = env('SEED_PASSWORD', 'password');
+
         $pai = Prodi::where('slug', 'pai')->first();
         $manajemen = Prodi::where('slug', 'manajemen')->first();
 
@@ -45,7 +57,7 @@ class UserSeeder extends Seeder
                 ['email' => $data['email']],
                 [
                     'name' => $data['name'],
-                    'password' => 'password', // otomatis di-hash oleh cast 'hashed'
+                    'password' => $password, // otomatis di-hash oleh cast 'hashed'
                     'role' => $data['role'],
                     'prodi_id' => $data['prodi_id'],
                     'is_active' => true,

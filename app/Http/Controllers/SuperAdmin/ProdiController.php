@@ -75,11 +75,6 @@ class ProdiController extends Controller
             ->with('status', "Program studi berhasil diperbarui menjadi \"{$nama}\".");
     }
 
-    /**
-     * Menghapus prodi. Ditolak bila masih memiliki pengguna terkait
-     * agar data dosen/mahasiswa tidak menjadi yatim.
-     */
-    /** Menghapus prodi, hanya bila sudah tidak dipakai data lain. */
     /** Menghapus prodi, hanya bila sudah tidak dipakai data lain. */
     public function destroy(Prodi $prodi): RedirectResponse
     {

@@ -75,9 +75,6 @@ class DosenController extends Controller
         ]);
     }
 
-    /**
-     * Memperbarui data dosen. Password hanya diganti bila diisi.
-     */
     /** Memperbarui data dosen, termasuk pemindahan prodi dan status akun. */
     public function update(UpdateDosenRequest $request, User $user): RedirectResponse
     {
@@ -108,10 +105,6 @@ class DosenController extends Controller
             ->with('status', 'Data dosen berhasil diperbarui.');
     }
 
-    /**
-     * Menghapus akun dosen.
-     */
-    /** Menghapus akun dosen dengan sejumlah penjagaan. */
     /** Menghapus akun dosen dengan sejumlah penjagaan. */
     public function destroy(Request $request, User $user): RedirectResponse
     {
@@ -122,7 +115,7 @@ class DosenController extends Controller
         }
 
         // Dihitung lewat helper model, jadi aman meski nilai peran berubah.
-        $jumlahSuperAdmin = User::all()->filter(fn (User $akun) => $akun->isSuperAdmin())->count();
+        $jumlahSuperAdmin = User::where('role', User::ROLE_SUPERADMIN)->count();
 
         if ($user->isSuperAdmin() && $jumlahSuperAdmin <= 1) {
             return back()

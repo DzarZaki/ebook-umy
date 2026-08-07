@@ -6,11 +6,9 @@
         "dev": "vite",
         "ikon": "node scripts/buat-ikon.mjs",
         "aset:pdfjs": "node scripts/salin-aset-pdfjs.mjs"
-
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
-        "@tailwindcss/vite": "^4.0.0",
         "alpinejs": "^3.4.2",
         "autoprefixer": "^10.4.2",
         "axios": "^1.7.4",

@@ -166,6 +166,42 @@ class BukuCrudTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_update_buku_tanpa_pdf_baru_mempertahankan_berkas_lama(): void
+    {
+        $prodi = Prodi::factory()->create();
+        $dosen = User::factory()->admin($prodi)->create();
+
+        // Unggah buku awal dengan PDF.
+        $this->actingAs($dosen)->post('/admin/buku', $this->dataValid());
+        $buku = Book::first();
+        $this->assertNotNull($buku);
+
+        $jalurAsli = $buku->file_path;
+        $jumlahHalamanAsli = $buku->page_count;
+
+        Storage::disk('local')->assertExists($jalurAsli);
+
+        // Update judul saja, tanpa mengirim berkas baru.
+        $this->actingAs($dosen)
+            ->put(route('admin.buku.update', $buku), [
+                'title' => 'Pengantar Manajemen Edisi Revisi',
+                'author' => 'Budi Santoso',
+                'lingkup' => 'prodi',
+                'access_mode' => Book::AKSES_PENUH,
+                'watermark_enabled' => 1,
+                'is_published' => 1,
+            ])
+            ->assertRedirect(route('admin.buku.index'));
+
+        $buku->refresh();
+
+        // Judul berubah, berkas dan jumlah halaman tetap.
+        $this->assertSame('Pengantar Manajemen Edisi Revisi', $buku->title);
+        $this->assertSame($jalurAsli, $buku->file_path);
+        $this->assertSame($jumlahHalamanAsli, $buku->page_count);
+        Storage::disk('local')->assertExists($jalurAsli);
+    }
+
     public function test_menghapus_buku_juga_menghapus_berkasnya(): void
     {
         $prodi = Prodi::factory()->create();

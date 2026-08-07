@@ -79,6 +79,38 @@ class ProfileTest extends TestCase
         $this->assertNull($user->fresh());
     }
 
+    public function test_user_nama_satu_kata_dapat_update_email_tanpa_ubah_nama(): void
+    {
+        // User dengan nama satu kata (tidak lolos NamaLengkap) harus tetap bisa
+        // memperbarui email selama nama tidak disentuh.
+        $user = User::factory()->create(['name' => 'Dzar']);
+
+        $this->actingAs($user)
+            ->patch('/profile', [
+                'name' => 'Dzar',
+                'email' => 'dzar.baru@example.com',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $this->assertSame('dzar.baru@example.com', $user->refresh()->email);
+    }
+
+    public function test_mengganti_nama_jadi_satu_kata_ditolak(): void
+    {
+        $user = User::factory()->create(['name' => 'Dzar']);
+
+        $this->actingAs($user)
+            ->patch('/profile', [
+                'name' => 'Zaki',
+                'email' => $user->email,
+            ])
+            ->assertSessionHasErrors('name');
+
+        // Nama di DB tidak berubah.
+        $this->assertSame('Dzar', $user->refresh()->name);
+    }
+
     public function test_correct_password_must_be_provided_to_delete_account(): void
     {
         $user = User::factory()->create();
