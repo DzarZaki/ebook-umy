@@ -45,11 +45,12 @@ class KategoriController extends Controller
     {
         $user = $request->user();
         $nama = $request->validated('name');
+        $prodiId = $request->validated('lingkup') === 'umum' ? null : $user->prodi_id;
 
         Category::create([
             'name' => $nama,
-            'slug' => Str::slug($nama),
-            'prodi_id' => $request->validated('lingkup') === 'umum' ? null : $user->prodi_id,
+            'slug' => $this->slugUnik($nama, $prodiId),
+            'prodi_id' => $prodiId,
             'created_by' => $user->id,
         ]);
 
@@ -73,7 +74,7 @@ class KategoriController extends Controller
 
         $kategori->update([
             'name' => $nama,
-            'slug' => Str::slug($nama),
+            'slug' => $this->slugUnik($nama, $kategori->prodi_id, $kategori->id),
         ]);
 
         return redirect()
@@ -81,10 +82,6 @@ class KategoriController extends Controller
             ->with('status', "Kategori berhasil diperbarui menjadi \"{$nama}\".");
     }
 
-    /**
-     * Menghapus kategori. Ditolak bila masih dipakai oleh buku.
-     */
-    /** Menghapus kategori, hanya bila belum dipakai buku mana pun. */
     /** Menghapus kategori, hanya bila belum dipakai buku mana pun. */
     public function destroy(Request $request, Category $kategori): RedirectResponse
     {
@@ -103,6 +100,29 @@ class KategoriController extends Controller
         return redirect()
             ->route('admin.kategori.index')
             ->with('status', 'Kategori berhasil dihapus.');
+    }
+
+    /**
+     * Menghasilkan slug unik dalam lingkup prodi yang sama.
+     * Menambah sufiks -2, -3, dst. bila slug dasar sudah dipakai.
+     */
+    private function slugUnik(string $nama, ?int $prodiId, ?int $abaikanId = null): string
+    {
+        $dasar = Str::slug($nama);
+        $kandidat = $dasar;
+        $n = 2;
+
+        while (
+            Category::where('prodi_id', $prodiId)
+                ->where('slug', $kandidat)
+                ->when($abaikanId, fn ($q) => $q->where('id', '!=', $abaikanId))
+                ->exists()
+        ) {
+            $kandidat = "{$dasar}-{$n}";
+            $n++;
+        }
+
+        return $kandidat;
     }
 
     /**

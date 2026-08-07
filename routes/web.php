@@ -65,8 +65,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/katalog/{buku}/catat-unduhan', [BacaController::class, 'catat'])->name('katalog.catat');
     // Kemajuan membaca dan penanda halaman, dipanggil dari penampil PDF.
     Route::get('/katalog/{buku}/data-baca', [BacaController::class, 'dataBaca'])->name('katalog.data-baca');
-    Route::post('/katalog/{buku}/progres', [BacaController::class, 'simpanProgres'])->name('katalog.progres');
-    Route::post('/katalog/{buku}/penanda', [BacaController::class, 'ubahPenanda'])->name('katalog.penanda');
+    Route::post('/katalog/{buku}/progres', [BacaController::class, 'simpanProgres'])->name('katalog.progres')->middleware('throttle:60,1');
+    Route::post('/katalog/{buku}/penanda', [BacaController::class, 'ubahPenanda'])->name('katalog.penanda')->middleware('throttle:60,1');
 });
 
 /*

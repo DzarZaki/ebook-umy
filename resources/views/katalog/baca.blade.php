@@ -62,12 +62,15 @@
                  class="mt-4 flex justify-center overflow-auto border border-kabut-200 bg-kabut-200 p-4"
                  data-url-berkas="{{ route('katalog.berkas', $buku) }}"
                  data-url-catat="{{ route('katalog.catat', $buku) }}"
+                 data-url-data-baca="{{ route('katalog.data-baca', $buku) }}"
+                 data-url-progres="{{ route('katalog.progres', $buku) }}"
+                 data-url-penanda="{{ route('katalog.penanda', $buku) }}"
                  data-csrf="{{ csrf_token() }}"
                  data-nama-berkas="{{ $buku->slug }}.pdf"
                  data-hal-awal="{{ $aturan['awal'] }}"
                  data-hal-akhir="{{ $aturan['akhir'] }}"
                  data-watermark="{{ $buku->watermark_enabled ? auth()->user()->name.' — '.auth()->user()->email : '' }}"
-                 data-watermark-kaki="Diunduh oleh {{ auth()->user()->name }} ({{ auth()->user()->email }}) pada {{ now()->format('d/m/Y') }}">
+                 @if($buku->watermark_enabled) data-watermark-kaki="Diunduh oleh {{ auth()->user()->name }} ({{ auth()->user()->email }}) pada {{ now()->format('d/m/Y') }}" @endif>
 
                 <div class="w-full max-w-3xl">
                     <p id="status-pembaca" class="py-16 text-center text-sm text-kabut-600">Memuat berkas…</p>
