@@ -203,6 +203,7 @@ async function siapkanPembaca(wadah) {
 	// Simpan kemajuan membaca setiap kali halaman berpindah (debounce 2 detik).
 	let timerProgres = null
 	let progresTertunda = null
+	let siapSimpan = false
 
 	function kirimProgres(payload) {
 		if (!data.urlProgres) return
@@ -220,7 +221,7 @@ async function siapkanPembaca(wadah) {
 	}
 
 	function simpanProgres(nomor, total) {
-		if (!data.urlProgres) return
+		if (!siapSimpan || !data.urlProgres) return
 		progresTertunda = { halaman: nomor, total }
 		clearTimeout(timerProgres)
 		timerProgres = setTimeout(() => {
@@ -248,6 +249,7 @@ async function siapkanPembaca(wadah) {
 	})
 
 	keHalaman(1)
+	siapSimpan = true
 }
 
 /** Menyusun berkas unduhan sesuai rentang halaman dan membubuhkan watermark. */
