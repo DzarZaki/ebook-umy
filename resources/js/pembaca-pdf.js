@@ -57,9 +57,11 @@ async function siapkanPembaca(wadah) {
 	let observerRender = null
 	let observerHalamanAktif = null
 	let sedangUbahSkala = false
-	let ukuranPlaceholder = { lebar: 0, tinggi: 0 }
+	let sinkronisasiTerjadwal = false
+	let ukuranPlaceholder = { lebar: 0, tinggi: 0, rasio: 1 }
 	const daftarPenanda = new Set()
 	const halamanTerlihat = new Set()
+	const halamanDenganKanvas = new Set()
 	const rasioTerlihat = new Map()
 	const keadaanHalaman = new Map()
 
@@ -150,9 +152,11 @@ async function siapkanPembaca(wadah) {
 		}
 	}
 
-	function terapkanUkuranPlaceholder(elemen) {
-		elemen.style.width = `${Math.floor(ukuranPlaceholder.lebar)}px`
-		elemen.style.height = `${Math.floor(ukuranPlaceholder.tinggi)}px`
+	function terapkanUkuranPlaceholder(keadaan) {
+		const rasio = keadaan.rasio || ukuranPlaceholder.rasio
+		keadaan.elemen.style.width = '100%'
+		keadaan.elemen.style.maxWidth = '100%'
+		keadaan.elemen.style.aspectRatio = `${rasio}`
 	}
 
 	async function hitungUkuranPlaceholder() {
@@ -161,6 +165,7 @@ async function siapkanPembaca(wadah) {
 		ukuranPlaceholder = {
 			lebar: viewport.width,
 			tinggi: viewport.height,
+			rasio: viewport.width / viewport.height,
 		}
 	}
 
@@ -170,6 +175,7 @@ async function siapkanPembaca(wadah) {
 		await hitungUkuranPlaceholder()
 		daftarHalaman.innerHTML = ''
 		halamanTerlihat.clear()
+		halamanDenganKanvas.clear()
 		rasioTerlihat.clear()
 		keadaanHalaman.clear()
 
@@ -178,9 +184,10 @@ async function siapkanPembaca(wadah) {
 			elemen.id = `halaman-${nomor}`
 			elemen.dataset.halaman = `${nomor}`
 			elemen.className = 'mx-auto mb-4 overflow-hidden bg-white shadow-sm'
-			terapkanUkuranPlaceholder(elemen)
 			daftarHalaman.appendChild(elemen)
-			keadaanHalaman.set(nomor, { elemen, sedangDirender: false })
+			const keadaan = { elemen, sedangDirender: false, gagalRender: false, rasio: ukuranPlaceholder.rasio }
+			terapkanUkuranPlaceholder(keadaan)
+			keadaanHalaman.set(nomor, keadaan)
 		}
 
 		return true
@@ -216,7 +223,12 @@ async function siapkanPembaca(wadah) {
 		const keadaan = keadaanHalaman.get(nomor)
 		if (!keadaan) return
 		const kanvas = keadaan.elemen.querySelector('canvas')
-		if (kanvas) kanvas.remove()
+		if (kanvas) {
+			kanvas.width = 0
+			kanvas.height = 0
+			kanvas.remove()
+		}
+		halamanDenganKanvas.delete(nomor)
 	}
 
 	function bongkarSemuaKanvas() {
@@ -237,15 +249,21 @@ async function siapkanPembaca(wadah) {
 		konteks.restore()
 	}
 
-	async function renderHalamanJikaPerlu(nomor) {
+	async function renderHalamanJikaPerlu(nomor, paksa = false) {
 		const keadaan = keadaanHalaman.get(nomor)
 		if (!keadaan || keadaan.sedangDirender) return
+		if (keadaan.gagalRender && !paksa) return
 		if (keadaan.elemen.querySelector('canvas')) return
 
 		keadaan.sedangDirender = true
 		try {
 			const halaman = await dokumen.getPage(nomor)
 			const viewport = halaman.getViewport({ scale: skala })
+			const rasioBaru = viewport.width / viewport.height
+			if (Math.abs((keadaan.rasio || 0) - rasioBaru) > 0.0001) {
+				keadaan.rasio = rasioBaru
+				terapkanUkuranPlaceholder(keadaan)
+			}
 			const kanvas = document.createElement('canvas')
 			const konteks = kanvas.getContext('2d')
 			if (!konteks) return
@@ -253,7 +271,7 @@ async function siapkanPembaca(wadah) {
 			kanvas.width = Math.floor(viewport.width)
 			kanvas.height = Math.floor(viewport.height)
 			kanvas.style.width = '100%'
-			kanvas.style.height = '100%'
+			kanvas.style.height = 'auto'
 			kanvas.className = 'block'
 
 			konteks.save()
@@ -273,26 +291,67 @@ async function siapkanPembaca(wadah) {
 			}
 
 			keadaan.elemen.replaceChildren(kanvas)
+			keadaan.gagalRender = false
+			halamanDenganKanvas.add(nomor)
 		} catch (galat) {
 			console.error(`Gagal merender halaman ${nomor}:`, galat)
+			const pesan = document.createElement('div')
+			pesan.className = 'flex h-full flex-col items-center justify-center gap-2 px-4 py-6 text-center'
+			const teks = document.createElement('p')
+			teks.className = 'text-sm text-kabut-600'
+			teks.textContent = `Halaman ${nomor} gagal dimuat`
+			const tombol = document.createElement('button')
+			tombol.type = 'button'
+			tombol.className = 'rounded-sm border border-kabut-300 px-3 py-1.5 text-sm font-medium text-kabut-700 hover:bg-kabut-100'
+			tombol.textContent = 'Coba lagi'
+			tombol.onclick = () => { void renderHalamanJikaPerlu(nomor, true) }
+			pesan.appendChild(teks)
+			pesan.appendChild(tombol)
+			keadaan.elemen.replaceChildren(pesan)
+			keadaan.gagalRender = true
+			halamanDenganKanvas.delete(nomor)
 		} finally {
 			keadaan.sedangDirender = false
 		}
 	}
 
+	function daftarHalamanSinkron() {
+		const sumber = halamanTerlihat.size > 0 ? Array.from(halamanTerlihat) : [halamanAktif]
+		const nomorMinimum = Math.max(1, Math.min(...sumber) - 6)
+		const nomorMaksimum = Math.min(dokumen.numPages, Math.max(...sumber) + 6)
+		const kandidat = new Set()
+
+		for (let nomor = nomorMinimum; nomor <= nomorMaksimum; nomor++) {
+			kandidat.add(nomor)
+		}
+
+		halamanDenganKanvas.forEach((nomor) => kandidat.add(nomor))
+		return kandidat
+	}
+
 	function sinkronkanRenderHalaman() {
 		const target = halamanTargetRender()
+		const kandidat = daftarHalamanSinkron()
 
-		for (let nomor = 1; nomor <= dokumen.numPages; nomor++) {
+		kandidat.forEach((nomor) => {
 			if (target.has(nomor)) {
 				void renderHalamanJikaPerlu(nomor)
-				continue
+				return
 			}
 
-			if (jarakTerdekatDariViewport(nomor) > 5) {
+			if (halamanDenganKanvas.has(nomor) && jarakTerdekatDariViewport(nomor) > 5) {
 				bongkarKanvas(nomor)
 			}
-		}
+		})
+	}
+
+	function jadwalkanSinkronisasiRender() {
+		if (sinkronisasiTerjadwal) return
+		sinkronisasiTerjadwal = true
+		requestAnimationFrame(() => {
+			sinkronisasiTerjadwal = false
+			sinkronkanRenderHalaman()
+		})
 	}
 
 	function perbaruiHalamanAktif(nomor, simpan = true) {
@@ -342,7 +401,7 @@ async function siapkanPembaca(wadah) {
 					halamanTerlihat.delete(nomor)
 				}
 			})
-			sinkronkanRenderHalaman()
+			jadwalkanSinkronisasiRender()
 		}, { threshold: 0.01 })
 
 		keadaanHalaman.forEach((keadaan) => observerRender.observe(keadaan.elemen))
@@ -450,9 +509,9 @@ async function siapkanPembaca(wadah) {
 
 		try {
 			await hitungUkuranPlaceholder()
-			keadaanHalaman.forEach((keadaan) => terapkanUkuranPlaceholder(keadaan.elemen))
+			keadaanHalaman.forEach((keadaan) => terapkanUkuranPlaceholder(keadaan))
 			bongkarSemuaKanvas()
-			sinkronkanRenderHalaman()
+			jadwalkanSinkronisasiRender()
 			const tujuan = gulirKeHalaman(target, 'auto')
 			if (tujuan) {
 				await tungguGulirSelesai(tujuan)
@@ -552,17 +611,17 @@ async function siapkanPembaca(wadah) {
 		return
 	}
 	siapkanObserverRender()
-	siapkanObserverHalamanAktif()
 	tampilkanStatus('')
 	pulihkanPenanda(Array.isArray(dataAwal?.penanda) ? dataAwal.penanda : [])
 	aturPanelPenanda(false)
-	sinkronkanRenderHalaman()
+	jadwalkanSinkronisasiRender()
 	const tujuanAwal = gulirKeHalaman(halamanAwal, 'auto')
 	if (tujuanAwal) {
 		await tungguGulirSelesai(tujuanAwal)
 		perbaruiHalamanAktif(tujuanAwal, false)
-		sinkronkanRenderHalaman()
+		jadwalkanSinkronisasiRender()
 	}
+	siapkanObserverHalamanAktif()
 	siapSimpan = true
 }
 
