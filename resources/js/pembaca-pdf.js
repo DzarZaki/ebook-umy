@@ -48,6 +48,8 @@ async function siapkanPembaca(wadah) {
 	let skala = 1.3
 	let sedangGambar = false
 	let bytesAsli = null
+	const tombolPenanda = document.getElementById('tombol-penanda')
+	const daftarPenanda = new Set()
 
 	/** Menampilkan pesan di bilah status, dan menyembunyikannya bila tidak ada pesan. */
 	function tampilkanStatus(teks) {
@@ -60,31 +62,57 @@ async function siapkanPembaca(wadah) {
 	// Berkas diambil sekali, lalu dipakai ulang untuk membaca maupun mengunduh.
 	tampilkanStatus('Memuat berkas…')
 
-	try {
-		const respons = await fetch(data.urlBerkas, { credentials: 'same-origin' })
+	async function muatDokumen() {
+		try {
+			const respons = await fetch(data.urlBerkas, { credentials: 'same-origin' })
 
-		if (!respons.ok) {
-			throw new Error(`Server menjawab ${respons.status}`)
+			if (!respons.ok) {
+				throw new Error(`Server menjawab ${respons.status}`)
+			}
+
+			bytesAsli = await respons.arrayBuffer()
+		} catch (galat) {
+			console.error('Gagal mengambil berkas PDF:', galat)
+			tampilkanStatus(`Berkas tidak dapat dimuat (${galat.message}). Coba muat ulang halaman.`)
+			throw galat
 		}
 
-		bytesAsli = await respons.arrayBuffer()
-	} catch (galat) {
-		console.error('Gagal mengambil berkas PDF:', galat)
-		tampilkanStatus(`Berkas tidak dapat dimuat (${galat.message}). Coba muat ulang halaman.`)
-		return
+		// Dokumen dibuka dari salinan bytes karena pdf.js memindahkan kepemilikan buffer.
+		try {
+			const tugas = pdfjsLib.getDocument({
+				data: bytesAsli.slice(0),
+				...ASET_PDFJS,
+			})
+
+			return await tugas.promise
+		} catch (galat) {
+			console.error('Gagal membuka dokumen PDF:', galat)
+			tampilkanStatus(`Berkas PDF tidak dapat dibuka (${galat.message}).`)
+			throw galat
+		}
 	}
 
-	// Dokumen dibuka dari salinan bytes karena pdf.js memindahkan kepemilikan buffer.
-	try {
-		const tugas = pdfjsLib.getDocument({
-			data: bytesAsli.slice(0),
-			...ASET_PDFJS,
-		})
+	async function muatDataBacaAwal() {
+		if (!data.urlDataBaca) return null
 
-		dokumen = await tugas.promise
-	} catch (galat) {
-		console.error('Gagal membuka dokumen PDF:', galat)
-		tampilkanStatus(`Berkas PDF tidak dapat dibuka (${galat.message}).`)
+		try {
+			const respons = await fetch(data.urlDataBaca, { credentials: 'same-origin' })
+			if (!respons.ok) return null
+			return await respons.json()
+		} catch {
+			return null
+		}
+	}
+
+	let dataAwal = null
+	try {
+		const [dokumenSiap, dataBacaAwal] = await Promise.all([
+			muatDokumen(),
+			muatDataBacaAwal(),
+		])
+		dokumen = dokumenSiap
+		dataAwal = dataBacaAwal
+	} catch {
 		return
 	}
 
@@ -163,7 +191,25 @@ async function siapkanPembaca(wadah) {
 	function keHalaman(nomor) {
 		halamanAktif = Math.min(Math.max(1, nomor), dokumen.numPages)
 		gambarHalaman(halamanAktif)
+		perbaruiStatusPenanda()
 		simpanProgres(halamanAktif, dokumen.numPages)
+	}
+
+	function pulihkanPenanda(daftar) {
+		daftarPenanda.clear()
+		daftar.forEach((nomor) => {
+			const halaman = Number.parseInt(nomor, 10)
+			if (Number.isInteger(halaman) && halaman >= 1) {
+				daftarPenanda.add(halaman)
+			}
+		})
+		perbaruiStatusPenanda()
+	}
+
+	function perbaruiStatusPenanda() {
+		if (!tombolPenanda) return
+		const aktif = daftarPenanda.has(halamanAktif)
+		tombolPenanda.setAttribute('aria-pressed', aktif ? 'true' : 'false')
 	}
 
 	/** Memasang penangan klik hanya bila tombolnya benar-benar ada. */
@@ -244,11 +290,24 @@ async function siapkanPembaca(wadah) {
 	pasangKlik('tombol-penanda', () => {
 		if (!data.urlPenanda) return
 		postJson(data.urlPenanda, data.csrf, { halaman: halamanAktif })
-			.then((res) => { if (res.status === 429 && import.meta.env.DEV) console.info('Penanda: terlalu banyak permintaan, dilewati.') })
+			.then(async (res) => {
+				if (res.status === 429) {
+					if (import.meta.env.DEV) console.info('Penanda: terlalu banyak permintaan, dilewati.')
+					return
+				}
+				if (!res.ok) throw new Error(`Server menjawab ${res.status}`)
+				const hasil = await res.json()
+				pulihkanPenanda(Array.isArray(hasil.penanda) ? hasil.penanda : [])
+			})
 			.catch((galat) => console.warn('Gagal mengubah penanda:', galat))
 	})
 
-	keHalaman(1)
+	const halamanAwal = Math.min(
+		Math.max(1, Number.parseInt(dataAwal?.halamanTerakhir, 10) || 1),
+		dokumen.numPages,
+	)
+	pulihkanPenanda(Array.isArray(dataAwal?.penanda) ? dataAwal.penanda : [])
+	keHalaman(halamanAwal)
 	siapSimpan = true
 }
 

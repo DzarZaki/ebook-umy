@@ -62,6 +62,7 @@
                  class="mt-4 flex justify-center overflow-auto border border-kabut-200 bg-kabut-200 p-4"
                  data-url-berkas="{{ route('katalog.berkas', $buku) }}"
                  data-url-catat="{{ route('katalog.catat', $buku) }}"
+                 data-url-data-baca="{{ route('katalog.data-baca', $buku) }}"
                  data-url-progres="{{ route('katalog.progres', $buku) }}"
                  data-url-penanda="{{ route('katalog.penanda', $buku) }}"
                  data-csrf="{{ csrf_token() }}"
