@@ -100,7 +100,7 @@
 
                 <div class="w-full max-w-3xl">
                     <p id="status-pembaca" class="py-16 text-center text-sm text-kabut-600">Memuat berkas…</p>
-                    <canvas id="kanvas-halaman" class="mx-auto block bg-white shadow-sm"></canvas>
+                    <div id="daftar-halaman" class="mx-auto w-full"></div>
                 </div>
             </div>
 
