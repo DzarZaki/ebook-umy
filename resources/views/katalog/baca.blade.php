@@ -32,6 +32,19 @@
                             class="rounded-sm border border-kabut-300 px-3 py-1.5 text-sm font-medium text-kabut-700 hover:bg-kabut-100">
                         Maju &rarr;
                     </button>
+
+                    <button id="tombol-penanda" type="button" aria-pressed="false"
+                            aria-label="Tandai halaman ini" title="Tandai halaman ini"
+                            class="rounded-sm border border-kabut-300 px-3 py-1.5 text-sm font-medium text-kabut-700 hover:bg-kabut-100">
+                        <svg id="ikon-penanda-outline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 3.75H6.75A2.25 2.25 0 0 0 4.5 6v14.25l7.5-4.5 7.5 4.5V6a2.25 2.25 0 0 0-2.25-2.25Z"/>
+                        </svg>
+                        <svg id="ikon-penanda-isi" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                             fill="currentColor" class="hidden h-4 w-4">
+                            <path d="M6.75 3.75h10.5A2.25 2.25 0 0 1 19.5 6v14.25a.75.75 0 0 1-1.136.643L12 17.079l-6.364 3.814A.75.75 0 0 1 4.5 20.25V6a2.25 2.25 0 0 1 2.25-2.25Z"/>
+                        </svg>
+                    </button>
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -39,6 +52,10 @@
                             class="rounded-sm border border-kabut-300 px-3 py-1.5 text-sm font-medium text-kabut-700 hover:bg-kabut-100">&minus;</button>
                     <button id="tombol-perbesar" type="button"
                             class="rounded-sm border border-kabut-300 px-3 py-1.5 text-sm font-medium text-kabut-700 hover:bg-kabut-100">+</button>
+                    <button id="tombol-panel-penanda" type="button" aria-expanded="false" aria-controls="panel-penanda"
+                            class="rounded-sm border border-kabut-300 px-3 py-1.5 text-sm font-medium text-kabut-700 hover:bg-kabut-100">
+                        Penanda
+                    </button>
 
                     @if ($aturan['boleh'])
                         <button id="tombol-unduh" type="button"
@@ -47,6 +64,15 @@
                         </button>
                     @endif
                 </div>
+            </div>
+
+            <div id="panel-penanda" class="mt-3 hidden border border-kabut-200 bg-white px-4 py-3">
+                <div class="mb-2 flex items-center justify-between">
+                    <p class="text-sm font-medium text-kabut-700">Halaman bertanda</p>
+                    <p class="text-xs text-kabut-500"><span id="jumlah-penanda">0</span> penanda</p>
+                </div>
+                <p id="pesan-penanda-kosong" class="text-sm text-kabut-500">Belum ada halaman yang ditandai</p>
+                <ul id="daftar-penanda" class="flex flex-wrap gap-2"></ul>
             </div>
 
             {{-- Keterangan aturan unduh --}}
@@ -74,7 +100,7 @@
 
                 <div class="w-full max-w-3xl">
                     <p id="status-pembaca" class="py-16 text-center text-sm text-kabut-600">Memuat berkas…</p>
-                    <canvas id="kanvas-halaman" class="mx-auto block bg-white shadow-sm"></canvas>
+                    <div id="daftar-halaman" class="mx-auto w-full"></div>
                 </div>
             </div>
 
