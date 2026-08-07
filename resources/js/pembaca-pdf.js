@@ -42,13 +42,20 @@ async function siapkanPembaca(wadah) {
 	const isianHalaman = document.getElementById('isian-halaman')
 	const totalHalaman = document.getElementById('total-halaman')
 	const tombolUnduh = document.getElementById('tombol-unduh')
+	const tombolPenanda = document.getElementById('tombol-penanda')
+	const ikonPenandaOutline = document.getElementById('ikon-penanda-outline')
+	const ikonPenandaIsi = document.getElementById('ikon-penanda-isi')
+	const tombolPanelPenanda = document.getElementById('tombol-panel-penanda')
+	const panelPenanda = document.getElementById('panel-penanda')
+	const daftarPenandaEl = document.getElementById('daftar-penanda')
+	const pesanPenandaKosong = document.getElementById('pesan-penanda-kosong')
+	const jumlahPenanda = document.getElementById('jumlah-penanda')
 
 	let dokumen = null
 	let halamanAktif = 1
 	let skala = 1.3
 	let sedangGambar = false
 	let bytesAsli = null
-	const tombolPenanda = document.getElementById('tombol-penanda')
 	const daftarPenanda = new Set()
 
 	/** Menampilkan pesan di bilah status, dan menyembunyikannya bila tidak ada pesan. */
@@ -209,7 +216,43 @@ async function siapkanPembaca(wadah) {
 	function perbaruiStatusPenanda() {
 		if (!tombolPenanda) return
 		const aktif = daftarPenanda.has(halamanAktif)
+		tombolPenanda.setAttribute('aria-label', aktif ? 'Hapus penanda halaman ini' : 'Tandai halaman ini')
+		tombolPenanda.setAttribute('title', aktif ? 'Hapus penanda halaman ini' : 'Tandai halaman ini')
 		tombolPenanda.setAttribute('aria-pressed', aktif ? 'true' : 'false')
+		if (ikonPenandaOutline) ikonPenandaOutline.classList.toggle('hidden', aktif)
+		if (ikonPenandaIsi) ikonPenandaIsi.classList.toggle('hidden', !aktif)
+		renderDaftarPenanda()
+	}
+
+	function renderDaftarPenanda() {
+		if (!daftarPenandaEl || !pesanPenandaKosong || !jumlahPenanda) return
+
+		const urut = Array.from(daftarPenanda).sort((a, b) => a - b)
+		daftarPenandaEl.innerHTML = ''
+		jumlahPenanda.textContent = urut.length
+		pesanPenandaKosong.classList.toggle('hidden', urut.length > 0)
+
+		urut.forEach((nomor) => {
+			const item = document.createElement('li')
+			const tombol = document.createElement('button')
+			tombol.type = 'button'
+			tombol.className = 'rounded-sm border border-kabut-300 px-3 py-1.5 text-sm font-medium text-kabut-700 hover:bg-kabut-100'
+			tombol.textContent = `Hal. ${nomor}`
+			if (nomor === halamanAktif) {
+				tombol.classList.add('bg-kabut-100')
+			}
+			tombol.onclick = () => keHalaman(nomor)
+			item.appendChild(tombol)
+			daftarPenandaEl.appendChild(item)
+		})
+	}
+
+	function aturPanelPenanda(terbuka) {
+		if (!panelPenanda || !tombolPanelPenanda) return
+		panelPenanda.classList.toggle('hidden', !terbuka)
+		tombolPanelPenanda.setAttribute('aria-expanded', terbuka ? 'true' : 'false')
+		tombolPanelPenanda.setAttribute('title', terbuka ? 'Tutup daftar penanda' : 'Buka daftar penanda')
+		tombolPanelPenanda.setAttribute('aria-label', terbuka ? 'Tutup daftar penanda' : 'Buka daftar penanda')
 	}
 
 	/** Memasang penangan klik hanya bila tombolnya benar-benar ada. */
@@ -229,6 +272,11 @@ async function siapkanPembaca(wadah) {
 	pasangKlik('tombol-perkecil', () => {
 		skala = Math.max(skala - 0.25, 0.6)
 		gambarHalaman(halamanAktif)
+	})
+	pasangKlik('tombol-panel-penanda', () => {
+		if (!panelPenanda) return
+		const terbuka = panelPenanda.classList.contains('hidden')
+		aturPanelPenanda(terbuka)
 	})
 
 	if (isianHalaman) {
@@ -307,6 +355,7 @@ async function siapkanPembaca(wadah) {
 		dokumen.numPages,
 	)
 	pulihkanPenanda(Array.isArray(dataAwal?.penanda) ? dataAwal.penanda : [])
+	aturPanelPenanda(false)
 	keHalaman(halamanAwal)
 	siapSimpan = true
 }
