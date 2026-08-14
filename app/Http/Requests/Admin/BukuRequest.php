@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Models\Book;
 use App\Models\Category;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Validator;
 
 /**
@@ -13,12 +14,74 @@ use Illuminate\Validation\Validator;
  */
 abstract class BukuRequest extends FormRequest
 {
+    private ?int $halamanTerbaca = null;
+
+    private bool $halamanSudahDihitung = false;
+
+    /** Ditandai bila berkasnya sendiri sudah ditolak, agar galat tidak berganda. */
+    private bool $berkasDitolak = false;
+
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            $this->periksaBerkasTerbaca($validator);
             $this->periksaLingkupKategori($validator);
             $this->periksaRentangHalaman($validator);
         });
+    }
+
+    /**
+     * Jumlah halaman berkas terkait, dihitung paling banyak sekali.
+     *
+     * Menghitung halaman kini berarti menjalankan qpdf sebagai proses terpisah
+     * atas berkas yang bisa mencapai 30 MB. Validator dan controller sama-sama
+     * memerlukan angka ini, jadi hasilnya diingat lalu dipakai bersama —
+     * termasuk hasil `null`, supaya kegagalan pun tidak diulang percuma.
+     */
+    public function jumlahHalamanTerbaca(): ?int
+    {
+        if (! $this->halamanSudahDihitung) {
+            $this->halamanTerbaca = $this->jumlahHalamanBuku();
+            $this->halamanSudahDihitung = true;
+        }
+
+        return $this->halamanTerbaca;
+    }
+
+    /**
+     * Berkas baru wajib bisa dibaca oleh qpdf, apa pun mode aksesnya.
+     *
+     * PDF yang tidak terbaca di sini akan gagal di semua tempat lain: pembaca
+     * tidak menampilkannya, stempel tidak menempel, pemotongan halaman ambruk.
+     * Menolaknya sekarang berarti dosennya tahu selagi masih memegang berkasnya
+     * — bukan mahasiswa yang menemukannya berbulan-bulan kemudian.
+     */
+    protected function periksaBerkasTerbaca(Validator $validator): void
+    {
+        $berkas = $this->file('berkas');
+
+        // Tanpa unggahan baru tidak ada yang perlu diperiksa di sini.
+        if (! $berkas instanceof UploadedFile || ! $berkas->isValid()) {
+            return;
+        }
+
+        // Berkas yang sudah gugur di aturan lain tidak perlu diadili dua kali.
+        if ($validator->errors()->has('berkas')) {
+            $this->berkasDitolak = true;
+
+            return;
+        }
+
+        if ($this->jumlahHalamanTerbaca() !== null) {
+            return;
+        }
+
+        $this->berkasDitolak = true;
+
+        $validator->errors()->add(
+            'berkas',
+            'Isi berkas PDF ini tidak dapat dibaca oleh sistem, sehingga tidak akan bisa ditampilkan kepada mahasiswa. Coba buka berkasnya di komputer Anda, simpan ulang sebagai PDF baru, lalu unggah kembali.',
+        );
     }
 
     /** Kategori prodi tidak boleh dipasang pada buku umum, dan sebaliknya. */
@@ -69,9 +132,26 @@ abstract class BukuRequest extends FormRequest
             return;
         }
 
-        $jumlahHalaman = $this->jumlahHalamanBuku();
+        // Berkasnya sudah ditolak utuh; menambah keluhan soal rentang halaman
+        // hanya akan membingungkan dosennya.
+        if ($this->berkasDitolak) {
+            return;
+        }
 
-        if ($jumlahHalaman !== null && $akhir > $jumlahHalaman) {
+        $jumlahHalaman = $this->jumlahHalamanTerbaca();
+
+        if ($jumlahHalaman === null) {
+            // Gagal-tertutup. Bila jumlah halaman tidak terbaca, pemotongan
+            // halaman saat diunduh pasti gagal juga.
+            $validator->errors()->add(
+                'download_page_end',
+                'Jumlah halaman buku ini tidak diketahui, sehingga mode unduh sebagian tidak dapat dipakai. Unggah ulang berkas PDF-nya, atau pilih mode Unduh penuh atau Baca saja.',
+            );
+
+            return;
+        }
+
+        if ($akhir > $jumlahHalaman) {
             $validator->errors()->add(
                 'download_page_end',
                 "Berkas PDF ini hanya memiliki {$jumlahHalaman} halaman, jadi halaman akhir tidak boleh melebihi angka itu.",

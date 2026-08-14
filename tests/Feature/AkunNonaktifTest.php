@@ -16,7 +16,7 @@ class AkunNonaktifTest extends TestCase
 
         // Mahasiswa aktif dialihkan dari /dashboard menuju katalog,
         // yang menandakan middleware `active` meloloskannya.
-        $this->actingAs($user)->get('/dashboard')->assertRedirect(route('katalog.index'));
+       $this->actingAs($user)->get('/dashboard')->assertRedirect(route('beranda.saya'));
 
         // Katalognya sendiri harus dapat dibuka penuh.
         $this->actingAs($user)->get(route('katalog.index'))->assertOk();

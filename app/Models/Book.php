@@ -6,16 +6,22 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
  * Model Book — satu berkas e-book/artikel PDF beserta aturan aksesnya.
+ *
+ * Buku dihapus secara lunak. Menghapusnya berarti ikut membuang riwayat baca,
+ * progres halaman, dan penanda milik mahasiswa, jadi penghapusan diberi masa
+ * tenggang sebelum perintah pembersih membuatnya permanen.
  */
 class Book extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /** Mode akses unduh. */
     public const AKSES_PENUH = 'full';
@@ -65,10 +71,39 @@ class Book extends Model
         return $this->hasMany(DownloadLog::class);
     }
 
+    /**
+     * Relasi: pengguna yang menyimpan buku ini ke koleksinya.
+     *
+     * Kebalikan dari User::bukuTersimpan(). Berguna untuk menghitung
+     * berapa banyak mahasiswa yang menyimpan sebuah buku — angka yang
+     * kelak berarti bagi dosen di halaman statistik.
+     */
+    public function tersimpanOleh(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'book_saves')
+            ->withTimestamps();
+    }
+
     /** Gunakan slug pada route model binding. */
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    /**
+     * Pasangan [disk, jalur] seluruh berkas milik buku ini.
+     *
+     * Dipakai bersama oleh controller dan perintah pembersih, supaya
+     * pengetahuan tentang disk mana menyimpan apa hanya tinggal di satu tempat.
+     *
+     * @return array<int, array{0: string, 1: string|null}>
+     */
+    public function berkasnya(): array
+    {
+        return [
+            ['local', $this->file_path],
+            ['public', $this->cover_path],
+        ];
     }
 
     /** Apakah buku ini bersifat umum (lintas prodi)? */
@@ -122,6 +157,42 @@ class Book extends Model
     public function scopeTerbit(Builder $query): Builder
     {
         return $query->where('is_published', true);
+    }
+
+    /**
+     * Scope: menyertakan status "sudah saya simpan" untuk seluruh baris
+     * dalam SATU kueri tambahan, bukan satu kueri per kartu buku.
+     *
+     * Tanpa ini, dua puluh kartu di halaman katalog berarti dua puluh
+     * perjalanan ke basis data — jenis kelambatan yang tidak terasa saat
+     * ada satu buku, dan menyiksa saat ada dua ratus.
+     *
+     * Hasilnya terbaca lewat sudahDisimpan() pada tiap buku.
+     */
+    public function scopeDenganStatusSimpan(Builder $query, ?User $pengguna): Builder
+    {
+        if (! $pengguna) {
+            return $query;
+        }
+
+        return $query->withExists([
+            'tersimpanOleh as tersimpan' => function ($q) use ($pengguna) {
+                $q->where('users.id', $pengguna->getKey());
+            },
+        ]);
+    }
+
+    /**
+     * Apakah buku ini ada di koleksi pengguna yang sedang melihat?
+     *
+     * Hanya bermakna bila kuerinya memakai scope denganStatusSimpan().
+     * Bila tidak, jawabannya selalu false — sengaja begitu, supaya
+     * halaman yang lupa memakai scope-nya menampilkan tombol simpan
+     * yang tidak aktif, bukan diam-diam menembakkan ratusan kueri.
+     */
+    public function sudahDisimpan(): bool
+    {
+        return (bool) ($this->attributes['tersimpan'] ?? false);
     }
 
     /**

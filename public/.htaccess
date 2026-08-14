@@ -1,3 +1,18 @@
+# Tipe MIME yang tidak dikenali Apache bawaan.
+#
+# Vite mengeluarkan worker pdf.js sebagai modul ES berekstensi .mjs. Apache
+# tidak punya pemetaan untuk ekstensi itu, sehingga berkasnya terkirim tanpa
+# tipe JavaScript — dan peramban menolak memuat modul semacam itu, dengan
+# pesan "non-JavaScript MIME type". Satu baris di bawah ini menutup celahnya.
+#
+# .wasm ikut didaftarkan karena pdf.js 5 ke atas memuat modul WebAssembly
+# untuk gambar JPEG2000; gejalanya persis sama dan hanya muncul pada buku
+# tertentu, sehingga jauh lebih sulit dilacak.
+<IfModule mod_mime.c>
+    AddType text/javascript .js .mjs
+    AddType application/wasm .wasm
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
@@ -7,11 +22,11 @@
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
-    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization]
 
     # Handle X-XSRF-Token Header
     RewriteCond %{HTTP:x-xsrf-token} .
-    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token]
 
     # Redirect Trailing Slashes If Not A Folder...
     RewriteCond %{REQUEST_FILENAME} !-d

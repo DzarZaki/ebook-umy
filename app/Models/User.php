@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -72,6 +74,51 @@ class User extends Authenticatable
     public function prodi(): BelongsTo
     {
         return $this->belongsTo(Prodi::class);
+    }
+
+    /**
+     * Buku yang sengaja disimpan pengguna untuk dibaca nanti.
+     *
+     * Urutannya dari yang paling baru disimpan, karena itulah urutan yang
+     * dibutuhkan halaman Koleksi Saya dan bagian "Tersimpan" di beranda.
+     *
+     * Buku yang sedang berada di Tempat Sampah otomatis tidak ikut muncul —
+     * SoftDeletes pada model Book yang mengurusnya. Barisnya tetap ada di
+     * tabel, sehingga buku yang dipulihkan dosen kembali ke koleksi
+     * mahasiswa tanpa ada yang perlu menyimpannya ulang.
+     */
+    public function bukuTersimpan(): BelongsToMany
+    {
+        return $this->belongsToMany(Book::class, 'book_saves')
+            ->withTimestamps()
+            ->orderByDesc('book_saves.created_at');
+    }
+
+    /** Kemajuan membaca pengguna ini di seluruh buku. */
+    public function kemajuanBaca(): HasMany
+    {
+        return $this->hasMany(ReadingProgress::class);
+    }
+
+    /** Seluruh penanda halaman milik pengguna ini. */
+    public function penanda(): HasMany
+    {
+        return $this->hasMany(Bookmark::class);
+    }
+
+    /**
+     * Apakah buku ini sudah ada di koleksi pengguna?
+     *
+     * Sengaja bertanya langsung ke basis data alih-alih memuat seluruh
+     * koleksi, supaya pemeriksaan pada satu kartu buku tidak menyeret
+     * ratusan baris. Untuk daftar panjang, muat kumpulan id-nya sekali
+     * di controller — lihat KoleksiController pada langkah berikutnya.
+     */
+    public function telahMenyimpan(Book $buku): bool
+    {
+        return $this->bukuTersimpan()
+            ->where('books.id', $buku->getKey())
+            ->exists();
     }
 
     /**

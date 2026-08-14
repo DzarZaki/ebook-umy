@@ -1,6 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
-import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
@@ -40,7 +39,6 @@ async function siapkanPembaca(wadah) {
 	const status = document.getElementById('status-pembaca')
 	const isianHalaman = document.getElementById('isian-halaman')
 	const totalHalaman = document.getElementById('total-halaman')
-	const tombolUnduh = document.getElementById('tombol-unduh')
 	const tombolPenanda = document.getElementById('tombol-penanda')
 	const ikonPenandaOutline = document.getElementById('ikon-penanda-outline')
 	const ikonPenandaIsi = document.getElementById('ikon-penanda-isi')
@@ -72,8 +70,10 @@ async function siapkanPembaca(wadah) {
 		status.textContent = teks
 		status.classList.toggle('hidden', teks === '')
 	}
+	
+		// Berkas diambil sekali untuk keperluan membaca di layar. Unduhan tidak lagi
+	// dirakit di browser — server yang memotong halaman dan menempelkan stempel.
 
-	// Berkas diambil sekali, lalu dipakai ulang untuk membaca maupun mengunduh.
 	tampilkanStatus('Memuat berkas…')
 
 	async function muatDokumen() {
@@ -541,9 +541,6 @@ async function siapkanPembaca(wadah) {
 		if (peristiwa.key === 'ArrowLeft') keHalaman(halamanAktif - 1)
 	})
 
-	if (tombolUnduh) {
-		tombolUnduh.onclick = () => susunUnduhan(tombolUnduh, data, bytesAsli)
-	}
 
 	// Simpan kemajuan membaca setiap kali halaman berpindah (debounce 2 detik).
 	let timerProgres = null
@@ -625,79 +622,17 @@ async function siapkanPembaca(wadah) {
 	siapSimpan = true
 }
 
-/** Menyusun berkas unduhan sesuai rentang halaman dan membubuhkan watermark. */
-async function susunUnduhan(tombol, data, bytesAsli) {
-	const labelAwal = tombol.textContent
-	tombol.disabled = true
-	tombol.textContent = 'Menyiapkan berkas…'
-
-	try {
-		const sumber = await PDFDocument.load(bytesAsli.slice(0))
-		const hasil = await PDFDocument.create()
-		const total = sumber.getPageCount()
-
-		const awal = data.halAwal ? Math.max(1, parseInt(data.halAwal)) : 1
-		const akhir = data.halAkhir ? Math.min(total, parseInt(data.halAkhir)) : total
-
-		const indeks = []
-		for (let i = awal; i <= akhir; i++) indeks.push(i - 1)
-
-		const halamanTersalin = await hasil.copyPages(sumber, indeks)
-		const font = await hasil.embedFont(StandardFonts.Helvetica)
-
-		halamanTersalin.forEach((halaman) => {
-			hasil.addPage(halaman)
-
-			if (!data.watermark) return
-
-			const { width, height } = halaman.getSize()
-
-			// Cap miring di tengah halaman.
-			halaman.drawText(data.watermark, {
-				x: width * 0.12,
-				y: height * 0.4,
-				size: Math.min(width, height) * 0.042,
-				font,
-				color: rgb(0.57, 0.22, 0.07),
-				opacity: 0.2,
-				rotate: degrees(32),
-			})
-
-			// Keterangan kecil di kaki halaman.
-			if (data.watermarkKaki) {
-				halaman.drawText(data.watermarkKaki, {
-					x: 24,
-					y: 18,
-					size: 8,
-					font,
-					color: rgb(0.45, 0.42, 0.4),
-					opacity: 0.75,
-				})
-			}
-		})
-
-		const bytes = await hasil.save()
-		const tautan = document.createElement('a')
-		tautan.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
-		tautan.download = data.namaBerkas
-		tautan.click()
-		URL.revokeObjectURL(tautan.href)
-
-		// Catat ke server untuk keperluan statistik dosen.
-		await postJson(data.urlCatat, data.csrf)
-
-		tombol.textContent = 'Berkas tersimpan'
-		setTimeout(() => { tombol.textContent = labelAwal }, 2500)
-	} catch (galat) {
-		console.error('Gagal menyiapkan berkas unduhan:', galat)
-		tombol.textContent = 'Gagal menyiapkan berkas'
-		setTimeout(() => { tombol.textContent = labelAwal }, 2500)
-	} finally {
-		tombol.disabled = false
-	}
-}
-
-document.addEventListener('DOMContentLoaded', () => {
+// Modul ini kini dimuat secara DINAMIS dari app.js, dan pemuatannya bisa
+// selesai setelah DOMContentLoaded terlanjur berlalu. Penangan yang dipasang
+// belakangan tidak pernah dipanggil — pembaca akan diam selamanya di tulisan
+// "Memuat berkas…". Karena itu kesiapan dokumen diperiksa, bukan ditunggu.
+const nyalakanPembaca = () => {
 	const wadah = document.getElementById('pembaca-pdf')
 	if (wadah) siapkanPembaca(wadah)
-})
+}
+
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', nyalakanPembaca, { once: true })
+} else {
+	nyalakanPembaca()
+}

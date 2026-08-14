@@ -4,36 +4,61 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Pustaka Dosen') }}</title>
+
+    {{-- Judul tab kini bisa diisi per halaman lewat <x-slot name="title">.
+         Selama belum diisi, isinya sama seperti sebelumnya. --}}
+    <title>{{ isset($title) ? $title.' · '.config('app.name', 'Pustaka Dosen') : config('app.name', 'Pustaka Dosen') }}</title>
 
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
     <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#5f4231">
-<link rel="apple-touch-icon" href="/images/icon-192.png">
+
+    {{-- Warna bilah aplikasi saat dipasang sebagai PWA. Nilainya diselaraskan
+         dengan sepia-700 palet baru; sebelumnya #5f4231 dari palet lama. --}}
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
+
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=fraunces:400,600,700|karla:400,500,600,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|playfair-display:400,600,700&display=swap" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans antialiased">
-    <div class="min-h-screen bg-kabut-50">
+    {{-- Lewati navigasi: tidak terlihat sampai pengguna keyboard menekan Tab
+         sekali. Tanpa ini, setiap perpindahan halaman memaksa mereka
+         menelusuri seluruh menu sebelum mencapai isi halaman. --}}
+    <a href="#konten"
+       class="sr-only rounded bg-white px-4 py-2 text-sm font-semibold text-jingga-700 ring-2 ring-jingga-600 focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50">
+        Lewati ke konten
+    </a>
+
+    {{-- Pembungkus ini dulu memakai bg-kabut-50. Warnanya dilepas supaya
+         dasar kertas (body::before dan body::after, Langkah 90) terlihat
+         menembus seluruh tinggi halaman tanpa terputus.
+
+         Semua halaman mahasiswa memakai kerangka ini, jadi satu perubahan di
+         sini berlaku untuk beranda, katalog, koleksi, dan detail buku. --}}
+    <div class="min-h-screen">
         @include('layouts.navigation')
 
+        {{-- Header halaman: latar putihnya dilepas, pemisahnya kini garis
+             rambut sewarna tinta yang memudar, bukan blok warna. --}}
         @isset($header)
-            <header class="border-b border-kabut-200 bg-white">
+            <header class="border-b garis-tinta">
                 <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                     {{ $header }}
                 </div>
             </header>
         @endisset
 
-        <main>
+        <main id="konten">
             {{ $slot }}
         </main>
 
-        <footer class="border-t border-kabut-200 bg-white">
-            <div class="mx-auto max-w-7xl px-4 py-6 text-xs text-kabut-500 sm:px-6 lg:px-8">
+        {{-- Kaki halaman ikut tembus pandang. Sedikit lebih gelap dari dasar
+             lewat rgba tipis, cukup untuk menutup halaman tanpa menjadi pita
+             warna baru. --}}
+        <footer class="mt-16 border-t garis-tinta bg-sepia-900/80">
+            <div class="mx-auto max-w-7xl px-4 py-8 text-xs text-kabut-500 sm:px-6 lg:px-8">
                 Pustaka Dosen &middot; Dikelola mandiri oleh dosen pengampu
             </div>
         </footer>

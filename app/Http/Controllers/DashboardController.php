@@ -4,17 +4,20 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 /**
- * Mengarahkan pengguna ke dashboard yang sesuai dengan perannya.
+ * Mengarahkan pengguna ke halaman utama yang sesuai dengan perannya.
+ *
+ * Berkas ini sengaja tidak menggambar apa pun. Tugasnya hanya menentukan
+ * tujuan, sehingga kueri berat setiap peran tinggal di controller-nya
+ * masing-masing.
  */
 class DashboardController extends Controller
 {
     /**
-     * Menentukan tujuan dashboard berdasarkan peran pengguna.
+     * Menentukan tujuan berdasarkan peran pengguna.
      */
-    public function __invoke(Request $request): View|RedirectResponse
+    public function __invoke(Request $request): RedirectResponse
     {
         $user = $request->user();
 
@@ -22,8 +25,14 @@ class DashboardController extends Controller
             return redirect()->route('superadmin.dashboard');
         }
 
-        // Admin/Dosen & Mahasiswa masih memakai dashboard umum
-        // Mahasiswa langsung diarahkan ke katalog sebagai halaman utamanya.
+        // Mahasiswa mendarat di rak pribadinya: buku yang sedang dibaca,
+        // yang tersimpan, lalu yang baru ditambahkan dosen. Katalog tetap
+        // ada di menu sebagai tempat menjelajah.
+        if ($user->isMahasiswa()) {
+            return redirect()->route('beranda.saya');
+        }
+
+        // Admin/Dosen: perilaku lama dipertahankan apa adanya.
         return redirect()->route('katalog.index');
     }
 }

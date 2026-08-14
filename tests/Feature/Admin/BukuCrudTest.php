@@ -44,6 +44,12 @@ class BukuCrudTest extends TestCase
         return UploadedFile::fake()->createWithContent('buku.pdf', $this->isiPdfMinimal());
     }
 
+    /** Gambar sampul tiruan yang benar-benar berupa JPEG. */
+    private function berkasSampul(): UploadedFile
+    {
+        return UploadedFile::fake()->image('sampul.jpg', 400, 600);
+    }
+
     /** Data unggahan buku yang sah, boleh ditimpa sebagian. */
     private function dataValid(array $ubah = []): array
     {
@@ -202,7 +208,13 @@ class BukuCrudTest extends TestCase
         Storage::disk('local')->assertExists($jalurAsli);
     }
 
-    public function test_menghapus_buku_juga_menghapus_berkasnya(): void
+    /**
+     * Menghapus buku membuangnya ke tempat sampah, bukan melenyapkannya.
+     *
+     * Berkasnya sengaja dipertahankan. Kalau berkas ikut terhapus, memulihkan
+     * buku hanya akan mengembalikan baris data yang menunjuk ke berkas hantu.
+     */
+    public function test_menghapus_buku_membuangnya_ke_tempat_sampah_tanpa_menghapus_berkas(): void
     {
         $prodi = Prodi::factory()->create();
         $dosen = User::factory()->admin($prodi)->create();
@@ -214,9 +226,90 @@ class BukuCrudTest extends TestCase
 
         Storage::disk('local')->assertExists($buku->file_path);
 
+        $this->actingAs($dosen)
+            ->delete(route('admin.buku.destroy', $buku))
+            ->assertRedirect(route('admin.buku.index'));
+
+        // Barisnya bertanda terbuang, bukan hilang.
+        $this->assertSoftDeleted('books', ['id' => $buku->id]);
+
+        // Dan lenyap dari seluruh kueri biasa di aplikasi.
+        $this->assertSame(0, Book::count());
+        $this->assertSame(1, Book::onlyTrashed()->count());
+
+        // Inti dari seluruh perubahan ini: berkasnya masih di tempatnya.
+        Storage::disk('local')->assertExists($buku->file_path);
+    }
+
+    /** Sampul pun ikut selamat saat buku dibuang ke tempat sampah. */
+    public function test_menghapus_buku_tidak_menghapus_sampulnya(): void
+    {
+        $prodi = Prodi::factory()->create();
+        $dosen = User::factory()->admin($prodi)->create();
+
+        $this->actingAs($dosen)->post('/admin/buku', $this->dataValid([
+            'sampul' => $this->berkasSampul(),
+        ]));
+
+        $buku = Book::first();
+        $this->assertNotNull($buku->cover_path, 'Sampul gagal tersimpan saat proses unggah.');
+
+        Storage::disk('public')->assertExists($buku->cover_path);
+
         $this->actingAs($dosen)->delete(route('admin.buku.destroy', $buku));
 
-        Storage::disk('local')->assertMissing($buku->file_path);
-        $this->assertDatabaseMissing('books', ['id' => $buku->id]);
+        $this->assertSoftDeleted('books', ['id' => $buku->id]);
+        Storage::disk('public')->assertExists($buku->cover_path);
+    }
+
+    /** Buku yang terbuang dapat dipulihkan lengkap dengan berkasnya. */
+    public function test_buku_di_tempat_sampah_dapat_dipulihkan(): void
+    {
+        $prodi = Prodi::factory()->create();
+        $dosen = User::factory()->admin($prodi)->create();
+
+        $this->actingAs($dosen)->post('/admin/buku', $this->dataValid());
+        $buku = Book::first();
+
+        $this->actingAs($dosen)->delete(route('admin.buku.destroy', $buku));
+
+        $terbuang = Book::onlyTrashed()->firstOrFail();
+        $terbuang->restore();
+
+        $this->assertSame(1, Book::count());
+        $this->assertDatabaseHas('books', [
+            'id' => $buku->id,
+            'deleted_at' => null,
+        ]);
+
+        // Berkasnya tidak pernah ke mana-mana, jadi bukunya langsung terbaca lagi.
+        Storage::disk('local')->assertExists($buku->file_path);
+    }
+
+    /**
+     * Buku di tempat sampah masih memegang slug-nya di database.
+     * Mengunggah ulang judul yang sama tidak boleh menabrak indeks unik.
+     */
+    public function test_slug_tidak_bentrok_dengan_buku_di_tempat_sampah(): void
+    {
+        $prodi = Prodi::factory()->create();
+        $dosen = User::factory()->admin($prodi)->create();
+
+        $this->actingAs($dosen)->post('/admin/buku', $this->dataValid());
+        $lama = Book::first();
+        $this->assertSame('pengantar-manajemen', $lama->slug);
+
+        $this->actingAs($dosen)->delete(route('admin.buku.destroy', $lama));
+
+        // Judul yang persis sama, diunggah ulang setelah yang lama dibuang.
+        $this->actingAs($dosen)
+            ->post('/admin/buku', $this->dataValid())
+            ->assertRedirect(route('admin.buku.index'));
+
+        $baru = Book::firstOrFail();
+
+        $this->assertNotSame($lama->id, $baru->id);
+        $this->assertSame('pengantar-manajemen-2', $baru->slug);
+        $this->assertSame(2, Book::withTrashed()->count());
     }
 }

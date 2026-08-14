@@ -1,82 +1,97 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Models\Bookmark;
-use App\Models\DownloadLog;
 use App\Models\ReadingProgress;
+use App\Services\BerkasBukuService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Halaman baca PDF, penyaluran berkas, dan pencatatan unduhan.
+ * Penampil PDF: halaman baca, penyaluran berkas untuk dibaca, kemajuan
+ * membaca, dan penanda halaman.
+ *
+ * Controller ini sengaja TIDAK menangani unduhan. Membaca dan mengunduh
+ * adalah dua wewenang yang berbeda, sehingga dipisahkan ke pintu masing
+ * masing; lihat UnduhController.
  */
 class BacaController extends Controller
 {
     /**
+     * Batas halaman untuk buku yang jumlah halamannya belum terbaca.
+     *
+     * Angka ini bukan aturan, melainkan pagar terakhir agar kolom integer
+     * tidak dijejali bilangan raksasa. Buku yang sehat selalu memakai
+     * page_count-nya sendiri.
+     */
+    private const BATAS_HALAMAN_TAK_DIKETAHUI = 100000;
+
+    public function __construct(
+        private readonly BerkasBukuService $berkasBuku,
+    ) {
+    }
+
+    /**
      * Menampilkan penampil PDF beserta aturan unduh yang berlaku.
      */
-    public function index(Request $request, Book $buku): View
+    public function index(Request $permintaan, Book $buku): View
     {
-        $user = $request->user();
-        abort_unless($buku->bolehDilihatOleh($user), 404);
+        $this->pastikanBolehMembaca($buku);
 
         return view('katalog.baca', [
             'buku' => $buku,
-            'aturan' => $buku->aturanUnduhUntuk($user),
+            'aturan' => $buku->aturanUnduhUntuk($permintaan->user()),
         ]);
     }
 
     /**
-     * Menyalurkan berkas PDF secara langsung dari penyimpanan privat.
-     * Berkas tidak pernah memiliki alamat publik, jadi hanya pengguna
-     * yang berhak dan sedang masuk yang dapat memuatnya.
+     * Menyalurkan berkas PDF untuk dibaca di penampil.
+     *
+     * Berkas dialirkan langsung dari penyimpanan privat dan tidak pernah
+     * memiliki alamat publik, sehingga hanya pengguna yang sedang masuk
+     * dan berhak yang dapat memuatnya.
+     *
+     * Perlu ditegaskan: yang keluar dari sini adalah dokumen asli tanpa
+     * potongan halaman. Itu memang wajar untuk membaca — penampil hanya
+     * menampilkan, tidak menyerahkan berkas. Penyerahan berkas ke tangan
+     * pengguna ditangani UnduhController, yang menegakkan pemotongan
+     * halaman dan stempel identitas.
      */
-    public function berkas(Request $request, Book $buku): StreamedResponse
+    public function berkas(Request $permintaan, Book $buku): StreamedResponse
     {
-        abort_unless($buku->bolehDilihatOleh($request->user()), 404);
-        abort_unless(Storage::disk('local')->exists($buku->file_path), 404);
+        $this->pastikanBolehMembaca($buku);
 
-        return Storage::disk('local')->response($buku->file_path, $buku->slug.'.pdf', [
+        try {
+            $relatif = $this->berkasBuku->jalurBacaan($buku, $permintaan->user());
+        } catch (AuthorizationException|RuntimeException) {
+            abort(404);
+        }
+
+        return Storage::disk('local')->response($relatif, $buku->slug.'.pdf', [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$buku->slug.'.pdf"',
             'X-Content-Type-Options' => 'nosniff',
+            'Referrer-Policy' => 'no-referrer',
             'Cache-Control' => 'private, max-age=0, no-store',
         ]);
-    }
-
-    /**
-     * Mencatat unduhan yang baru saja dilakukan mahasiswa.
-     * Aturan tetap diperiksa ulang di sisi server agar tidak bisa dilewati.
-     */
-    public function catat(Request $request, Book $buku): JsonResponse
-    {
-        $user = $request->user();
-        abort_unless($buku->bolehDilihatOleh($user), 404);
-
-        $aturan = $buku->aturanUnduhUntuk($user);
-        abort_unless($aturan['boleh'], 403, $aturan['alasan']);
-
-        DownloadLog::create([
-            'book_id' => $buku->id,
-            'user_id' => $user->id,
-            'prodi_id' => $user->prodi_id,
-            'mode' => $buku->access_mode,
-        ]);
-
-        return response()->json(['status' => 'tercatat']);
     }
 
     /** Mengirim kemajuan membaca dan daftar penanda milik pengguna untuk buku ini. */
     public function dataBaca(Request $permintaan, Book $buku): JsonResponse
     {
-        $pengguna = $permintaan->user();
+        $this->pastikanBolehMembaca($buku);
 
-        abort_unless($buku->bolehDilihatOleh($pengguna), 404);
+        $pengguna = $permintaan->user();
 
         $progres = ReadingProgress::where('user_id', $pengguna->id)
             ->where('book_id', $buku->id)
@@ -95,13 +110,17 @@ class BacaController extends Controller
     /** Menyimpan halaman terakhir yang dibaca agar bisa dilanjutkan di perangkat lain. */
     public function simpanProgres(Request $permintaan, Book $buku): JsonResponse
     {
-        $pengguna = $permintaan->user();
+        $this->pastikanBolehMembaca($buku);
 
-        abort_unless($buku->bolehDilihatOleh($pengguna), 404);
+        $pengguna = $permintaan->user();
+        $batas = $this->batasHalaman($buku);
 
         $data = $permintaan->validate([
-            'halaman' => ['required', 'integer', 'min:1', 'max:100000'],
-            'total' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'halaman' => ['required', 'integer', 'min:1', 'max:'.$batas],
+            'total' => ['nullable', 'integer', 'min:1', 'max:'.$batas],
+        ], [
+            'halaman.max' => "Buku ini hanya memiliki {$batas} halaman.",
+            'total.max' => "Buku ini hanya memiliki {$batas} halaman.",
         ]);
 
         // updateOrCreate menjaga hanya ada satu baris per pengguna per buku.
@@ -112,7 +131,10 @@ class BacaController extends Controller
             ],
             [
                 'last_page' => $data['halaman'],
-                'total_pages' => $data['total'] ?? $buku->page_count,
+                // Jumlah halaman diambil dari catatan server lebih dulu.
+                // Angka kiriman penampil hanya dipakai bila buku ini memang
+                // belum pernah terbaca jumlah halamannya.
+                'total_pages' => $buku->page_count ?? ($data['total'] ?? null),
             ],
         );
 
@@ -122,12 +144,15 @@ class BacaController extends Controller
     /** Menyalakan atau mencabut penanda pada sebuah halaman, lalu mengembalikan daftar terbaru. */
     public function ubahPenanda(Request $permintaan, Book $buku): JsonResponse
     {
-        $pengguna = $permintaan->user();
+        $this->pastikanBolehMembaca($buku);
 
-        abort_unless($buku->bolehDilihatOleh($pengguna), 404);
+        $pengguna = $permintaan->user();
+        $batas = $this->batasHalaman($buku);
 
         $data = $permintaan->validate([
-            'halaman' => ['required', 'integer', 'min:1', 'max:100000'],
+            'halaman' => ['required', 'integer', 'min:1', 'max:'.$batas],
+        ], [
+            'halaman.max' => "Buku ini hanya memiliki {$batas} halaman.",
         ]);
 
         $penanda = Bookmark::where('user_id', $pengguna->id)
@@ -153,6 +178,32 @@ class BacaController extends Controller
             'penanda' => $daftar,
             'penanda_total' => count($daftar),
         ]);
+    }
+
+    /**
+     * Gerbang izin tunggal untuk seluruh method di controller ini.
+     *
+     * Memakai 404, bukan 403, dengan sengaja: keberadaan buku milik
+     * program studi lain sebaiknya tidak terungkap kepada yang tidak
+     * berhak membukanya.
+     */
+    private function pastikanBolehMembaca(Book $buku): void
+    {
+        abort_if(Gate::denies('baca', $buku), 404);
+    }
+
+    /**
+     * Nomor halaman tertinggi yang masuk akal untuk buku ini.
+     *
+     * Buku yang page_count-nya belum terbaca — misalnya PDF yang gagal
+     * dihitung qpdf — jatuh ke pagar umum, supaya mahasiswa tidak
+     * terkunci dari penanda hanya karena catatan servernya belum lengkap.
+     */
+    private function batasHalaman(Book $buku): int
+    {
+        $jumlah = (int) ($buku->page_count ?? 0);
+
+        return $jumlah > 0 ? $jumlah : self::BATAS_HALAMAN_TAK_DIKETAHUI;
     }
 
     /** Daftar nomor halaman yang ditandai, selalu urut dari kecil ke besar, dibatasi $limit item. */

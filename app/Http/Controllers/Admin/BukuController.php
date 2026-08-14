@@ -7,7 +7,7 @@ use App\Http\Requests\Admin\StoreBukuRequest;
 use App\Http\Requests\Admin\UpdateBukuRequest;
 use App\Models\Book;
 use App\Models\Category;
-use App\Support\PdfHelper;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -15,12 +15,26 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 /**
  * Pengelolaan koleksi buku oleh dosen (admin prodi).
+ *
+ * Wewenang diputuskan oleh BookPolicy, bukan oleh controller ini. Yang
+ * tersisa di sini hanyalah pertanyaan — authorize() — sedangkan jawabannya
+ * tinggal di satu tempat bersama seluruh aturan kepemilikan buku.
  */
 class BukuController extends Controller
 {
+    use AuthorizesRequests;
+
+    /** Ekstensi sampul yang diizinkan, dipetakan dari jenis gambar sesungguhnya. */
+    private const EKSTENSI_GAMBAR = [
+        IMAGETYPE_JPEG => 'jpg',
+        IMAGETYPE_PNG => 'png',
+        IMAGETYPE_WEBP => 'webp',
+    ];
+
     /** Menampilkan daftar buku milik prodi dosen ditambah buku umum miliknya. */
     public function index(Request $request): View
     {
@@ -46,6 +60,8 @@ class BukuController extends Controller
     /** Menampilkan formulir unggah buku baru. */
     public function create(Request $request): View
     {
+        $this->authorize('create', Book::class);
+
         $daftarKategori = $this->kategoriTersedia($request);
 
         return view('admin.buku.create', [
@@ -58,31 +74,46 @@ class BukuController extends Controller
     /** Menyimpan buku baru beserta berkas PDF-nya. */
     public function store(StoreBukuRequest $request): RedirectResponse
     {
+        $this->authorize('create', Book::class);
+
         $data = $request->validated();
         $dosen = $request->user();
         $berkas = $request->file('berkas');
 
-        // Jumlah halaman dibaca lebih dulu, selagi berkas sementara masih utuh.
-        $jumlahHalaman = PdfHelper::hitungHalaman($berkas->getPathname());
+        // Halaman sudah dihitung saat validasi berjalan. Angkanya diambil dari
+        // sana supaya qpdf tidak dijalankan dua kali atas berkas yang sama.
+        $jumlahHalaman = $request->jumlahHalamanTerbaca();
 
-        Book::create([
-            'title' => $data['title'],
-            'slug' => $this->buatSlug($data['title']),
-            'author' => $data['author'] ?? null,
-            'description' => $data['description'] ?? null,
-            'prodi_id' => $data['lingkup'] === 'umum' ? null : $dosen->prodi_id,
-            'category_id' => $data['category_id'] ?? null,
-            'uploaded_by' => $dosen->id,
-            'file_path' => $this->simpanPdf($berkas),
-            'file_size' => $berkas->getSize(),
-            'page_count' => $jumlahHalaman,
-            'cover_path' => $this->simpanSampul($request->file('sampul')),
-            'access_mode' => $data['access_mode'],
-            'download_page_start' => $data['access_mode'] === Book::AKSES_SEBAGIAN ? $data['download_page_start'] : null,
-            'download_page_end' => $data['access_mode'] === Book::AKSES_SEBAGIAN ? $data['download_page_end'] : null,
-            'watermark_enabled' => $request->boolean('watermark_enabled'),
-            'is_published' => $request->boolean('is_published'),
-        ]);
+        $jalurPdf = $this->simpanPdf($berkas);
+        $jalurSampul = $this->simpanSampul($request->file('sampul'));
+
+        try {
+            Book::create([
+                'title' => $data['title'],
+                'slug' => $this->buatSlug($data['title']),
+                'author' => $data['author'] ?? null,
+                'description' => $data['description'] ?? null,
+                'prodi_id' => $data['lingkup'] === 'umum' ? null : $dosen->prodi_id,
+                'category_id' => $data['category_id'] ?? null,
+                'uploaded_by' => $dosen->id,
+                'file_path' => $jalurPdf,
+                'file_size' => $berkas->getSize(),
+                'page_count' => $jumlahHalaman,
+                'cover_path' => $jalurSampul,
+                'access_mode' => $data['access_mode'],
+                'download_page_start' => $data['access_mode'] === Book::AKSES_SEBAGIAN ? $data['download_page_start'] : null,
+                'download_page_end' => $data['access_mode'] === Book::AKSES_SEBAGIAN ? $data['download_page_end'] : null,
+                'watermark_enabled' => $request->boolean('watermark_enabled'),
+                'is_published' => $request->boolean('is_published'),
+            ]);
+        } catch (Throwable $galat) {
+            // Barisnya gagal dibuat, jadi berkas yang terlanjur tersalin tidak
+            // punya pemilik. Tanpa pembersihan ini ia akan menghuni disk
+            // selamanya tanpa seorang pun tahu ia ada.
+            $this->hapusBerkas([['local', $jalurPdf], ['public', $jalurSampul]]);
+
+            throw $galat;
+        }
 
         return redirect()
             ->route('admin.buku.index')
@@ -92,7 +123,7 @@ class BukuController extends Controller
     /** Menampilkan formulir penyuntingan buku. */
     public function edit(Request $request, Book $buku): View
     {
-        abort_unless($buku->bolehDikelolaOleh($request->user()), 403);
+        $this->authorize('update', $buku);
 
         $daftarKategori = $this->kategoriTersedia($request);
 
@@ -103,7 +134,16 @@ class BukuController extends Controller
         ]);
     }
 
-    /** Memperbarui buku; berkas lama dipertahankan bila tidak ada unggahan baru. */
+    /**
+     * Memperbarui buku; berkas lama dipertahankan bila tidak ada unggahan baru.
+     *
+     * Berkas baru selalu disimpan lebih dulu dan yang lama dihapus paling
+     * akhir. Bila urutannya dibalik, satu kegagalan di tengah jalan akan
+     * meninggalkan buku yang datanya menunjuk ke berkas yang sudah lenyap.
+     *
+     * Wewenang di sini dijaga UpdateBukuRequest::authorize(), yang juga
+     * bertanya kepada BookPolicy::update().
+     */
     public function update(UpdateBukuRequest $request, Book $buku): RedirectResponse
     {
         $data = $request->validated();
@@ -125,50 +165,85 @@ class BukuController extends Controller
             'is_published' => $request->boolean('is_published'),
         ];
 
-        if ($berkas) {
-            Storage::disk('local')->delete($buku->file_path);
+        $pdfBaru = null;
+        $pdfLama = null;
+        $sampulBaru = null;
+        $sampulLama = null;
 
-            $perubahan['page_count'] = PdfHelper::hitungHalaman($berkas->getPathname());
-            $perubahan['file_path'] = $this->simpanPdf($berkas);
+        if ($berkas) {
+            $pdfBaru = $this->simpanPdf($berkas);
+            $pdfLama = $buku->file_path;
+
+            $perubahan['page_count'] = $request->jumlahHalamanTerbaca();
+            $perubahan['file_path'] = $pdfBaru;
             $perubahan['file_size'] = $berkas->getSize();
         }
 
         if ($sampul) {
-            if ($buku->cover_path) {
-                Storage::disk('public')->delete($buku->cover_path);
-            }
+            $sampulBaru = $this->simpanSampul($sampul);
+            $sampulLama = $buku->cover_path;
 
-            $perubahan['cover_path'] = $this->simpanSampul($sampul);
+            $perubahan['cover_path'] = $sampulBaru;
         }
 
-        $buku->update($perubahan);
+        try {
+            $buku->update($perubahan);
+        } catch (Throwable $galat) {
+            // Data gagal berubah, jadi berkas lama masih yang berlaku.
+            // Yang baru justru harus dibuang.
+            $this->hapusBerkas([['local', $pdfBaru], ['public', $sampulBaru]]);
+
+            throw $galat;
+        }
+
+        // Baru sekarang aman: data sudah menunjuk ke berkas yang baru.
+        $this->hapusBerkas([['local', $pdfLama], ['public', $sampulLama]]);
 
         return redirect()
             ->route('admin.buku.index')
             ->with('status', 'Buku berhasil diperbarui.');
     }
 
-    /** Menghapus buku beserta seluruh berkas yang menyertainya. */
+    /**
+     * Membuang buku ke tempat sampah.
+     *
+     * Berkasnya sengaja tidak disentuh. Buku membawa serta riwayat baca,
+     * progres, dan penanda milik mahasiswa — hal yang tidak bisa diunggah
+     * ulang — jadi penghapusan diberi masa tenggang. Perintah
+     * `ebook:bersihkan-buku` yang nanti melenyapkannya berikut berkasnya.
+     */
     public function destroy(Request $request, Book $buku): RedirectResponse
     {
-        abort_unless($buku->bolehDikelolaOleh($request->user()), 403);
-
-        Storage::disk('local')->delete($buku->file_path);
-
-        if ($buku->cover_path) {
-            Storage::disk('public')->delete($buku->cover_path);
-        }
+        $this->authorize('delete', $buku);
 
         $buku->delete();
 
         return redirect()
             ->route('admin.buku.index')
-            ->with('status', 'Buku berhasil dihapus.');
+            ->with('status', 'Buku dipindahkan ke tempat sampah. Berkasnya masih tersimpan selama masa tenggang.');
+    }
+
+    /**
+     * Menghapus sekumpulan berkas dari disk masing-masing.
+     *
+     * @param  array<int, array{0: string, 1: string|null}>  $daftar  pasangan [disk, jalur]
+     */
+    private function hapusBerkas(array $daftar): void
+    {
+        foreach ($daftar as [$disk, $jalur]) {
+            if ($jalur) {
+                Storage::disk($disk)->delete($jalur);
+            }
+        }
     }
 
     /**
      * Membuat slug dari judul buku dan menjamin keunikannya.
      * Bila slug sudah dipakai, ditambahkan angka di belakangnya.
+     *
+     * Buku di tempat sampah ikut diperiksa: barisnya masih ada di database dan
+     * masih memegang slug-nya. Tanpa withTrashed(), mengunggah ulang buku yang
+     * baru saja dihapus akan menabrak indeks unik dengan galat database mentah.
      */
     private function buatSlug(string $judul, ?int $abaikanId = null): string
     {
@@ -177,7 +252,7 @@ class BukuController extends Controller
         $urutan = 2;
 
         while (
-            Book::query()
+            Book::withTrashed()
                 ->where('slug', $slug)
                 ->when($abaikanId, fn ($kueri) => $kueri->whereKeyNot($abaikanId))
                 ->exists()
@@ -219,7 +294,30 @@ class BukuController extends Controller
             return null;
         }
 
-        return $this->salinBerkas($sampul, 'public', 'covers', $sampul->getClientOriginalExtension() ?: 'jpg');
+        return $this->salinBerkas($sampul, 'public', 'covers', $this->ekstensiGambar($sampul));
+    }
+
+    /**
+     * Menentukan ekstensi sampul dari isi berkas, bukan dari nama kiriman.
+     *
+     * Nama berkas sepenuhnya dikendalikan pengunggah. Sampul tersimpan di disk
+     * publik, jadi ekstensi seperti .html akan membuat server menyajikannya
+     * sebagai halaman — dan JPEG boleh memuat teks apa pun di metadatanya.
+     * Hanya tiga jenis gambar yang boleh mendarat di sana, dengan nama yang
+     * kita tentukan sendiri.
+     */
+    private function ekstensiGambar(UploadedFile $sampul): string
+    {
+        $keterangan = @getimagesize($sampul->getPathname());
+        $jenis = $keterangan[2] ?? null;
+
+        if (! isset(self::EKSTENSI_GAMBAR[$jenis])) {
+            throw ValidationException::withMessages([
+                'sampul' => 'Gambar sampul harus berupa JPG, PNG, atau WEBP yang sah.',
+            ]);
+        }
+
+        return self::EKSTENSI_GAMBAR[$jenis];
     }
 
     /** Penyalin berkas serbaguna dengan penjagaan dan pesan galat yang ramah. */

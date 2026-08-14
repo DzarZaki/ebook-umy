@@ -48,9 +48,6 @@
                             <td class="px-4 py-3 text-kabut-500">{{ $mahasiswa->created_at->translatedFormat('d M Y') }}</td>
                         <td class="px-4 py-3 text-right">
     <div class="flex items-center justify-end gap-3">
-        <a href="{{ route('admin.mahasiswa.edit', $mahasiswa) }}"
-           class="text-sm text-jingga-700 underline hover:text-jingga-800">Ubah</a>
-
         <x-tombol-konfirmasi
             :form-id="'form-status-'.$mahasiswa->id"
             :label="$mahasiswa->is_active ? 'Nonaktifkan' : 'Aktifkan'"

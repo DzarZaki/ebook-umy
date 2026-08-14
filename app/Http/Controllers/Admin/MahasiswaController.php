@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\UpdateMahasiswaRequest;
-use App\Models\Prodi;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,29 +34,6 @@ class MahasiswaController extends Controller
             'daftarMahasiswa' => $daftarMahasiswa,
             'cari' => $cari,
         ]);
-    }
-
-    /** Menampilkan formulir penyuntingan seorang mahasiswa. */
-    public function edit(Request $request, User $mahasiswa): View
-    {
-        $this->pastikanBoleh($request, $mahasiswa);
-
-        return view('admin.mahasiswa.edit', [
-            'mahasiswa' => $mahasiswa,
-            'daftarProdi' => Prodi::orderBy('name')->get(),
-        ]);
-    }
-
-    /** Menyimpan perubahan data mahasiswa, termasuk pemindahan program studi. */
-    public function update(UpdateMahasiswaRequest $request, User $mahasiswa): RedirectResponse
-    {
-        $this->pastikanBoleh($request, $mahasiswa);
-
-        $mahasiswa->update($request->validated());
-
-        return redirect()
-            ->route('admin.mahasiswa.index')
-            ->with('status', 'Data mahasiswa berhasil diperbarui.');
     }
 
     /** Mengaktifkan atau menonaktifkan akun mahasiswa. */

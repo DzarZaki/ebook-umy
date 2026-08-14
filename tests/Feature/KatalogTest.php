@@ -109,10 +109,10 @@ class KatalogTest extends TestCase
             ->assertSee('Buku Prodi B');
     }
 
-    public function test_mahasiswa_diarahkan_dari_dashboard_ke_katalog(): void
+        public function test_mahasiswa_diarahkan_dari_dashboard_ke_beranda(): void
     {
         $this->actingAs(User::factory()->mahasiswa()->create())
             ->get('/dashboard')
-            ->assertRedirect(route('katalog.index'));
+            ->assertRedirect(route('beranda.saya'));
     }
 }

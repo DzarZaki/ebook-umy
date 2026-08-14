@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Book;
+use App\Rules\BerkasPdfAman;
 use App\Rules\DeskripsiAman;
 use App\Rules\PolaTeks;
 use App\Support\PdfHelper;
@@ -12,11 +14,20 @@ use Illuminate\Http\UploadedFile;
  */
 class UpdateBukuRequest extends BukuRequest
 {
+    /**
+     * Wewenang diserahkan sepenuhnya kepada BookPolicy::update(),
+     * yang pada gilirannya bertanya kepada Book::bolehDikelolaOleh().
+     * Satu aturan, satu tempat.
+     */
     public function authorize(): bool
     {
         $buku = $this->route('buku');
 
-        return ($this->user()?->isAdmin() ?? false) && $buku?->bolehDikelolaOleh($this->user());
+        if (! $buku instanceof Book) {
+            return false;
+        }
+
+        return $this->user()?->can('update', $buku) ?? false;
     }
 
     /**
@@ -30,7 +41,7 @@ class UpdateBukuRequest extends BukuRequest
             'description' => ['nullable', 'string', 'max:2000', new DeskripsiAman],
             'lingkup' => ['required', 'in:prodi,umum'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-            'berkas' => ['nullable', 'file', 'mimes:pdf', 'max:30720'],
+            'berkas' => ['nullable', 'file', 'mimes:pdf', 'max:30720', new BerkasPdfAman],
             'sampul' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'access_mode' => ['required', 'in:full,partial,readonly'],
             'download_page_start' => ['nullable', 'integer', 'min:1'],

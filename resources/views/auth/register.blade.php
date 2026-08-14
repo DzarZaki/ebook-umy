@@ -17,7 +17,7 @@
             <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
                           :value="old('name')" required autofocus autocomplete="name" />
             <p class="mt-1 text-xs text-kabut-500">
-                Tuliskan nama asli sesuai data kampus, minimal dua kata.
+                Tuliskan nama asli sesuai data akademik, minimal dua kata.
             </p>
             <x-input-error :messages="$errors->get('name')" class="mt-2" />
         </div>

@@ -1,11 +1,11 @@
 <section>
     <header>
-        <h2 class="text-lg font-medium text-kabut-900">
-            {{ __('Profile Information') }}
+        <h2 class="text-lg font-medium text-kabut-50">
+            Informasi Profil
         </h2>
 
-        <p class="mt-1 text-sm text-kabut-600">
-            {{ __("Update your account's profile information and email address.") }}
+        <p class="mt-1 text-sm text-kabut-400">
+            Perbarui informasi profil dan alamat surel akun Anda.
         </p>
     </header>
 
@@ -14,13 +14,13 @@
         @method('patch')
 
         <div>
-            <x-input-label for="name" :value="__('Name')" />
+            <x-input-label for="name" value="Nama" />
             <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 
         <div>
-            <x-input-label for="email" :value="__('Email')" />
+            <x-input-label for="email" value="Surel" />
             <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
             <x-input-error class="mt-2" :messages="$errors->get('email')" />
         </div>
@@ -30,11 +30,11 @@
     <div>
         <x-input-label value="Program Studi" />
 
-        <div class="mt-1 border border-kabut-200 bg-kabut-50 px-3 py-2 text-sm text-kabut-700">
+        <div class="mt-1 border border-sepia-700 bg-sepia-800 px-3 py-2 text-sm text-kabut-300">
             {{ $user->prodi->name }}
         </div>
 
-        <p class="mt-1 text-xs text-kabut-500">
+        <p class="mt-1 text-xs text-kabut-400">
             @if ($user->isMahasiswa())
                 Program studi ditentukan oleh kode akses saat pendaftaran dan hanya dapat diubah oleh dosen.
             @else
@@ -45,7 +45,7 @@
 @endif
 
         <div class="flex items-center gap-4">
-            <x-primary-button>{{ __('Save') }}</x-primary-button>
+            <x-primary-button>Simpan</x-primary-button>
 
             @if (session('status') === 'profile-updated')
                 <p
@@ -53,8 +53,8 @@
                     x-show="show"
                     x-transition
                     x-init="setTimeout(() => show = false, 2000)"
-                    class="text-sm text-kabut-600"
-                >{{ __('Saved.') }}</p>
+                    class="text-sm text-kabut-400"
+                >Tersimpan.</p>
             @endif
         </div>
     </form>

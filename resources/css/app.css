@@ -4,7 +4,7 @@
 
 @layer base {
     body {
-        @apply bg-kabut-50 text-kabut-800;
+        @apply bg-sepia-900 text-kabut-100;
     }
 
     h1, h2, h3, h4 {
@@ -15,4 +15,859 @@
 /* Menyembunyikan elemen Alpine sebelum siap (mencegah modal berkedip). */
 [x-cloak] {
     display: none !important;
+}
+
+/* =====================================================================
+   Fase 3.5 — Gerak dan kedalaman
+   Ditambahkan di bawah @tailwind utilities dengan sengaja, agar aturan
+   di sini boleh menang atas utilitas Tailwind.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Muncul saat bergulir
+   Sengaja dikurung di dalam .js-gerak, kelas yang dipasang oleh
+   animasi.js pada elemen <html>. Bila JavaScript gagal dimuat, tidak
+   ada satu pun tulisan yang tersembunyi. Isi lebih penting daripada
+   gerak; ia tidak boleh bergantung padanya.
+   --------------------------------------------------------------------- */
+.js-gerak [data-muncul] {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    transition:
+        opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: var(--tunda, 0ms);
+}
+
+.js-gerak [data-muncul].tampil {
+    opacity: 1;
+    transform: none;
+}
+
+/* ---------------------------------------------------------------------
+   2. Buku 3D
+   Bukan gambar buku, melainkan benda bervolume: sampul di depan,
+   punggung menghilang ke belakang, dan bayangan yang jatuh ke meja.
+   Ketebalannya datang dari --tebal, yang dihitung dari jumlah halaman.
+   --------------------------------------------------------------------- */
+.rak-3d {
+    perspective: 1600px;
+    perspective-origin: 50% 40%;
+}
+
+.buku3d {
+    position: relative;
+    transform-style: preserve-3d;
+    transform: rotateY(var(--putar, 14deg)) rotateX(1.5deg);
+    transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Rotasi Y positif membawa tepi kiri ke arah penonton, sehingga
+   punggung buku terlihat. Nilai negatif akan menyembunyikannya. */
+.group:hover .buku3d,
+.buku3d:focus-within {
+    transform: rotateY(26deg) rotateX(0deg) translateY(-0.5rem) scale(1.02);
+}
+
+/* Sampul depan */
+.buku3d__muka {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2px 5px 5px 2px;
+    background-color: #f3ece1;
+    box-shadow:
+        inset 0 0 0 1px rgba(37, 27, 18, 0.12),
+        inset -1px 0 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Bayangan engsel: gelap tepat di sisi punggung, memudar ke kanan.
+   Tanpa ini sampul terlihat seperti stiker, bukan seperti kertas
+   yang menekuk di jilidannya. */
+.buku3d__muka::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 14%;
+    background: linear-gradient(
+        to right,
+        rgba(37, 27, 18, 0.34) 0%,
+        rgba(37, 27, 18, 0.14) 38%,
+        rgba(255, 255, 255, 0.16) 82%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Kilau tipis yang bergeser saat buku berputar */
+.buku3d__muka::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        rgba(255, 255, 255, 0) 42%,
+        rgba(255, 255, 255, 0.22) 50%,
+        rgba(255, 255, 255, 0) 58%
+    );
+    opacity: 0;
+    transition: opacity 0.55s ease;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.group:hover .buku3d__muka::after {
+    opacity: 1;
+}
+
+/* Punggung buku: berdiri di tepi kiri lalu menghilang ke belakang.
+   Lebarnya = ketebalan buku. */
+.buku3d__punggung {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: var(--tebal, 20px);
+    transform-origin: left center;
+    transform: rotateY(90deg);
+    border-radius: 2px 0 0 2px;
+    background:
+        linear-gradient(
+            to right,
+            rgba(37, 27, 18, 0.42) 0%,
+            rgba(37, 27, 18, 0.16) 45%,
+            rgba(37, 27, 18, 0.5) 100%
+        ),
+        var(--warna-punggung, #5a4430);
+    backface-visibility: hidden;
+}
+
+/* Tumpukan kertas di sisi kanan: garis-garis halus, bukan warna rata */
+.buku3d__kertas {
+    position: absolute;
+    top: 1.5%;
+    right: 0;
+    height: 97%;
+    width: var(--tebal, 20px);
+    transform-origin: right center;
+    transform: rotateY(-90deg);
+    border-radius: 0 2px 2px 0;
+    background:
+        repeating-linear-gradient(
+            to right,
+            #faf8f3 0px,
+            #faf8f3 1px,
+            #e5e0d6 1px,
+            #e5e0d6 2px
+        );
+    backface-visibility: hidden;
+}
+
+/* Bayangan di meja. Melebar dan melunak saat buku terangkat. */
+.buku3d__bayang {
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    bottom: -0.65rem;
+    height: 1.1rem;
+    border-radius: 999px;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(37, 27, 18, 0.3) 0%,
+        rgba(37, 27, 18, 0.12) 45%,
+        rgba(37, 27, 18, 0) 72%
+    );
+    filter: blur(2px);
+    transition: all 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+}
+
+.group:hover .buku3d__bayang {
+    left: 2%;
+    right: 2%;
+    bottom: -1rem;
+    opacity: 0.75;
+    filter: blur(6px);
+}
+
+/* ---------------------------------------------------------------------
+   3. Rak bergulir mendatar
+   Membaca rak sungguhan itu menyamping, bukan ke bawah.
+   --------------------------------------------------------------------- */
+.rak-gulir {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior-x: contain;
+}
+
+.rak-gulir::-webkit-scrollbar {
+    display: none;
+}
+
+.rak-gulir > * {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------------
+   4. Marquee
+   --------------------------------------------------------------------- */
+@keyframes jalan-kiri {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+.marquee {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent,
+        black 8%,
+        black 92%,
+        transparent
+    );
+    mask-image: linear-gradient(
+        to right,
+        transparent,
+        black 8%,
+        black 92%,
+        transparent
+    );
+}
+
+.marquee__isi {
+    display: flex;
+    width: max-content;
+    animation: jalan-kiri var(--laju, 42s) linear infinite;
+}
+
+.marquee:hover .marquee__isi {
+    animation-play-state: paused;
+}
+
+/* ---------------------------------------------------------------------
+   5. Tipografi editorial
+   --------------------------------------------------------------------- */
+.judul-raksasa {
+    text-wrap: balance;
+    letter-spacing: -0.03em;
+    line-height: 0.92;
+}
+
+/* Angka besar bergaris tepi, dipakai untuk menomori bagian dan buku.
+   Ini yang membuat halaman terbaca sebagai indeks, bukan sebagai grid. */
+.angka-tepi {
+    color: transparent;
+    -webkit-text-stroke: 1px currentColor;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Garis bawah yang menyapu dari kiri, bukan yang menyala tiba-tiba */
+.sapu-bawah {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    transition: background-size 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sapu-bawah:hover,
+.sapu-bawah:focus-visible {
+    background-size: 100% 1px;
+}
+
+/* ---------------------------------------------------------------------
+   6. Kertas
+   Butiran sangat halus supaya bidang besar tidak terasa seperti plastik.
+   --------------------------------------------------------------------- */
+.tekstur-kertas {
+    background-image:
+        radial-gradient(
+            rgba(37, 27, 18, 0.035) 0.5px,
+            transparent 0.5px
+        ),
+        radial-gradient(rgba(37, 27, 18, 0.03) 0.5px, transparent 0.5px);
+    background-size: 14px 14px, 22px 22px;
+    background-position: 0 0, 7px 11px;
+}
+
+/* ---------------------------------------------------------------------
+   7. Hormati permintaan diam
+   Satu blok terakhir yang mematikan semuanya. Orang yang menyalakan
+   "kurangi gerak" di sistem operasinya sedang meminta dengan sopan,
+   dan permintaan itu tidak boleh ditawar.
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .js-gerak [data-muncul] {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+    }
+
+    .buku3d,
+    .buku3d__bayang,
+    .buku3d__muka::after,
+    .sapu-bawah {
+        transition: none !important;
+    }
+
+    .group:hover .buku3d {
+        transform: rotateY(var(--putar, 14deg)) rotateX(1.5deg);
+    }
+
+    .marquee__isi {
+        animation: none;
+    }
+
+    .rak-gulir {
+        scroll-behavior: auto;
+    }
+}
+
+/* =====================================================================
+   FASE 3.5 — LANGKAH 80: MEJA BACA
+   Seluruh isi pembaca dibuat oleh pembaca-pdf.js, jadi satu-satunya cara
+   mendandaninya tanpa menyentuh JavaScript adalah dari sini.
+   ===================================================================== */
+
+@keyframes muncul-halaman {
+	from {
+		opacity: 0;
+		transform: translateY(12px) scale(0.994);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/*
+	Setiap halaman digambar ke <canvas> baru yang dibuat sekali saja saat
+	halaman itu pertama kali terlihat (pembaca-pdf.js baris 256 dan 267).
+	Karena elemennya benar-benar baru, animasi ini berjalan sendiri tanpa
+	perlu dipanggil: halaman naik dan memudar masuk seperti lembar yang
+	baru diletakkan di atas meja.
+
+	PENTING — ukuran kanvas TIDAK boleh disentuh dari sini. Tidak ada
+	width, height, atau max-width. Ukuran itulah yang diubah oleh tombol
+	− dan +; sekali kita paksa lewat CSS, fungsi zoom akan tampak mati
+	padahal JS-nya tetap bekerja.
+*/
+#daftar-halaman canvas {
+	display: block;
+	background-color: #ffffff;
+	box-shadow:
+		0 1px 2px rgba(37, 27, 18, 0.08),
+		0 18px 36px -20px rgba(37, 27, 18, 0.35);
+	animation: muncul-halaman 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/*
+	Perpindahan halaman meluncur, bukan melompat. Ini berlaku untuk
+	lompatan apa pun di dalam meja baca — tombol Mundur/Maju, kotak nomor
+	halaman, maupun keping penanda.
+*/
+#pembaca-pdf {
+	scroll-behavior: smooth;
+}
+
+/*
+	Keping penanda di dalam panel dibuat oleh JS (baris 469–475), jadi
+	bentuknya hanya bisa ditentukan dari sini. Kelas bg-kabut-100 yang
+	dipasang JS pada penanda halaman aktif sengaja tidak diganggu.
+*/
+#daftar-penanda button {
+	cursor: pointer;
+	border: 1px solid #e5e0d6;
+	padding: 0.375rem 0.75rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+	color: #47413a;
+	transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+#daftar-penanda button:hover {
+	border-color: #e0ab8a;
+	background-color: #fdf6f0;
+	color: #6f3714;
+}
+
+#daftar-penanda button:focus-visible {
+	outline: 2px solid #a4551f;
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#daftar-halaman canvas {
+		animation: none;
+	}
+
+	#pembaca-pdf {
+		scroll-behavior: auto;
+	}
+
+	#daftar-penanda button {
+		transition: none;
+	}
+}
+
+/* =====================================================================
+   FASE 3.6 — LANGKAH 87: BUKU RAKSASA HALAMAN MUKA
+   Buku yang dapat dibuka, seluruhnya CSS. Isi halamannya HTML sungguhan
+   supaya dapat diklik, diseleksi, dan dibaca mesin pencari.
+
+   Kelas yang disediakan:
+     .buku-panggung                    pembawa perspektif
+     .buku-muka                        badan buku; kelas .terbuka / .tertutup
+     .buku-muka__bayang                bayangan di meja
+     .buku-muka__lembar                halaman; --kiri / --kanan
+     .buku-muka__jilid                 lipatan tengah
+     .buku-muka__sampul                sampul depan yang berputar
+     .buku-muka__sampul-balik          sisi dalam sampul
+
+   Seluruh gerakan memakai satu tempo dasar: 1500ms. Badan buku, halaman,
+   lipatan, dan bayangan selesai pada saat yang sama dengan sampul.
+   ===================================================================== */
+
+.buku-panggung {
+	perspective: 2400px;
+	perspective-origin: 50% 38%;
+}
+
+.buku-muka {
+	position: relative;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	aspect-ratio: 16 / 10;
+	transform-style: preserve-3d;
+	will-change: transform;
+	/* Tertutup: buku bergeser ke kanan dan sedikit menyerong. */
+	transform: rotateX(8deg) rotateY(-7deg) translateX(25%) scale(0.94);
+	transition: transform 1500ms cubic-bezier(0.22, 1, 0.28, 1);
+}
+
+.buku-muka.terbuka {
+	transform: rotateX(5deg) rotateY(0deg) translateX(0) scale(1);
+}
+
+/* --- Bayangan di meja ------------------------------------------------ */
+
+.buku-muka__bayang {
+	position: absolute;
+	left: 6%;
+	right: 6%;
+	bottom: -6%;
+	height: 14%;
+	background: radial-gradient(ellipse at center, rgba(37, 27, 18, 0.55), rgba(37, 27, 18, 0) 70%);
+	filter: blur(18px);
+	transform: translateZ(-40px) scaleX(0.7);
+	transition: transform 1500ms cubic-bezier(0.22, 1, 0.28, 1);
+	pointer-events: none;
+}
+
+.buku-muka.terbuka .buku-muka__bayang {
+	transform: translateZ(-40px) scaleX(1);
+}
+
+/* --- Halaman -------------------------------------------------------- */
+
+.buku-muka__lembar {
+	position: relative;
+	overflow: hidden;
+	background-color: #faf7f2;
+	transform: translateZ(4px);
+	box-shadow: 0 1px 2px rgba(37, 27, 18, 0.1);
+}
+
+/*
+	Halaman kiri tidak sekadar memudar masuk. Ia naik sedikit sambil
+	terungkap, dan waktunya diatur agar terjadi SAAT sampul sedang menyapu
+	di atasnya — jadi terasa tersingkap, bukan tiba-tiba ada.
+*/
+.buku-muka__lembar--kiri {
+	border-radius: 3px 0 0 3px;
+	background-image: linear-gradient(to left, rgba(37, 27, 18, 0.16), rgba(37, 27, 18, 0) 22%);
+	opacity: 0;
+	transform: translateZ(4px) translateY(10px);
+	transition:
+		opacity 620ms cubic-bezier(0.16, 1, 0.3, 1) 820ms,
+		transform 900ms cubic-bezier(0.16, 1, 0.3, 1) 820ms;
+}
+
+.buku-muka.terbuka .buku-muka__lembar--kiri {
+	opacity: 1;
+	transform: translateZ(4px) translateY(0);
+}
+
+.buku-muka__lembar--kanan {
+	border-radius: 0 3px 3px 0;
+	background-image: linear-gradient(to right, rgba(37, 27, 18, 0.16), rgba(37, 27, 18, 0) 22%);
+}
+
+/* --- Lipatan tengah -------------------------------------------------- */
+
+.buku-muka__jilid {
+	position: absolute;
+	left: 50%;
+	top: 0;
+	bottom: 0;
+	width: 26px;
+	margin-left: -13px;
+	background: linear-gradient(
+		to right,
+		rgba(37, 27, 18, 0) 0%,
+		rgba(37, 27, 18, 0.22) 40%,
+		rgba(37, 27, 18, 0.3) 50%,
+		rgba(37, 27, 18, 0.22) 60%,
+		rgba(37, 27, 18, 0) 100%
+	);
+	transform: translateZ(5px);
+	opacity: 0;
+	transition: opacity 700ms ease 900ms;
+	pointer-events: none;
+}
+
+.buku-muka.terbuka .buku-muka__jilid {
+	opacity: 1;
+}
+
+/* --- Sampul depan ---------------------------------------------------- */
+
+.buku-muka__sampul {
+	position: absolute;
+	left: 50%;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	display: block;
+	width: 50%;
+	cursor: pointer;
+	border: 0;
+	border-radius: 2px 4px 4px 2px;
+	background-color: #3f2f21;
+	background-image: linear-gradient(115deg, #5a4430 0%, #3f2f21 45%, #251b12 100%);
+	box-shadow:
+		inset 3px 0 0 rgba(164, 85, 31, 0.55),
+		inset 0 0 0 1px rgba(227, 213, 194, 0.12),
+		0 22px 40px -18px rgba(37, 27, 18, 0.7);
+	transform-origin: left center;
+	transform: translateZ(16px) rotateY(0deg);
+	transform-style: preserve-3d;
+	backface-visibility: hidden;
+	will-change: transform;
+	text-align: left;
+}
+
+.buku-muka__sampul:focus-visible {
+	outline: 2px solid #cd8659;
+	outline-offset: 4px;
+}
+
+/* Kilau yang menyapu permukaan sampul selama ia berputar. */
+.buku-muka__sampul::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: linear-gradient(
+		105deg,
+		rgba(250, 247, 242, 0) 28%,
+		rgba(250, 247, 242, 0.24) 50%,
+		rgba(250, 247, 242, 0) 72%
+	);
+	opacity: 0;
+	transform: translateZ(0.4px);
+	pointer-events: none;
+}
+
+/*
+	Setiap keyframe membawa kurvanya sendiri. Inilah perbaikan utamanya:
+	sampul mulai berat, meluncur cepat di tengah, lalu mendarat pelan —
+	satu gerakan, bukan dua gerakan yang disambung.
+
+	Sudut akhir melewati 180 derajat. Enam derajat lewat rata membuat tepi
+	bebasnya menukik ke BELAKANG halaman kiri, bukan ke depan.
+*/
+@keyframes buka-sampul {
+	0% {
+		transform: translateZ(16px) rotateY(0deg);
+		animation-timing-function: cubic-bezier(0.55, 0, 0.85, 0.32);
+	}
+	20% {
+		transform: translateZ(16px) rotateY(-19deg);
+		animation-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+	}
+	56% {
+		transform: translateZ(13px) rotateY(-113deg);
+		animation-timing-function: cubic-bezier(0.28, 0.5, 0.4, 1);
+	}
+	82% {
+		transform: translateZ(-4px) rotateY(-184deg);
+		animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+	}
+	92% {
+		transform: translateZ(-8px) rotateY(-191deg);
+		animation-timing-function: cubic-bezier(0.4, 0, 0.4, 1);
+	}
+	100% {
+		transform: translateZ(-8px) rotateY(-186deg);
+	}
+}
+
+/* Menutup: sampul terangkat sedikit dulu, baru jatuh. Itu berat bendanya. */
+@keyframes tutup-sampul {
+	0% {
+		transform: translateZ(-8px) rotateY(-186deg);
+		animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+	}
+	16% {
+		transform: translateZ(-8px) rotateY(-193deg);
+		animation-timing-function: cubic-bezier(0.45, 0, 0.6, 1);
+	}
+	50% {
+		transform: translateZ(13px) rotateY(-110deg);
+		animation-timing-function: cubic-bezier(0.3, 0.45, 0.4, 1);
+	}
+	88% {
+		transform: translateZ(16px) rotateY(-5deg);
+		animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+	}
+	100% {
+		transform: translateZ(16px) rotateY(0deg);
+	}
+}
+
+@keyframes kilau-sampul {
+	0% {
+		opacity: 0;
+	}
+	26% {
+		opacity: 0.85;
+	}
+	62% {
+		opacity: 0.28;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+
+.buku-muka.terbuka .buku-muka__sampul {
+	animation: buka-sampul 1500ms forwards;
+}
+
+.buku-muka.terbuka .buku-muka__sampul::before {
+	animation: kilau-sampul 1500ms ease-out forwards;
+}
+
+.buku-muka.tertutup .buku-muka__sampul {
+	animation: tutup-sampul 1300ms forwards;
+}
+
+.buku-muka.tertutup .buku-muka__sampul::before {
+	animation: kilau-sampul 1300ms ease-out forwards;
+}
+
+/* Sisi dalam sampul: kertas pelapis. */
+.buku-muka__sampul-balik {
+	position: absolute;
+	inset: 0;
+	border-radius: 4px 2px 2px 4px;
+	background-color: #e3d5c2;
+	background-image: linear-gradient(to left, rgba(37, 27, 18, 0.18), rgba(37, 27, 18, 0) 30%);
+	transform: rotateY(180deg);
+	backface-visibility: hidden;
+}
+
+/* =====================================================================
+   PONSEL — 3D dilepas, isi buku mengalir sebagai tulisan biasa
+   ===================================================================== */
+
+@media (max-width: 767px) {
+	.buku-panggung {
+		perspective: none;
+	}
+
+	.buku-muka {
+		display: block;
+		aspect-ratio: auto;
+		transform: none;
+		will-change: auto;
+	}
+
+	.buku-muka.terbuka {
+		transform: none;
+	}
+
+	.buku-muka__sampul,
+	.buku-muka__bayang,
+	.buku-muka__jilid {
+		display: none;
+	}
+
+	.buku-muka__lembar {
+		transform: none;
+		box-shadow: none;
+		background-image: none;
+		border-radius: 0;
+	}
+
+	.buku-muka__lembar--kiri,
+	.buku-muka.terbuka .buku-muka__lembar--kiri {
+		opacity: 1;
+		transform: none;
+		transition: none;
+	}
+}
+
+/* =====================================================================
+   HEMAT GERAK — buku langsung terbuka, tanpa putaran
+   ===================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+	.buku-muka,
+	.buku-muka.terbuka {
+		transform: none;
+		transition: none;
+	}
+
+	.buku-muka__sampul {
+		display: none;
+	}
+
+	.buku-muka__lembar--kiri,
+	.buku-muka.terbuka .buku-muka__lembar--kiri,
+	.buku-muka__jilid,
+	.buku-muka.terbuka .buku-muka__jilid {
+		opacity: 1;
+		transform: translateZ(4px);
+		transition: none;
+	}
+
+	.buku-muka.terbuka .buku-muka__sampul,
+	.buku-muka.tertutup .buku-muka__sampul,
+	.buku-muka.terbuka .buku-muka__sampul::before,
+	.buku-muka.tertutup .buku-muka__sampul::before {
+		animation: none;
+	}
+}
+
+/* =====================================================================
+   FASE 3.7 — LANGKAH 90: DASAR KERTAS
+
+   Satu bidang bahan untuk seluruh situs, menggantikan pita putih-krem
+   yang berselang-seling.
+
+   Dua lapis, keduanya position: fixed sehingga tidak ikut menggulir —
+   halaman terasa bergerak DI ATAS kertas, bukan membawa kertasnya.
+     body::before  gradasi hangat + dua cahaya lembut di sudut
+     body::after   butiran kertas, digambar SVG, tanpa berkas gambar
+
+   Keduanya diberi z-index negatif, jadi berada di belakang seluruh isi
+   halaman dan tidak pernah menghalangi klik.
+   ===================================================================== */
+
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -2;
+	pointer-events: none;
+	background:
+		radial-gradient(900px 620px at 82% -12%, rgba(251, 191, 36, 0.07), transparent 68%),
+		radial-gradient(1100px 720px at 4% 108%, rgba(59, 130, 246, 0.04), transparent 70%),
+		linear-gradient(178deg, #0f172a 0%, #0c1220 42%, #090e1a 100%);
+}
+
+body::after {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	opacity: 0.32;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23b)' opacity='0.4'/%3E%3C/svg%3E");
+	background-size: 220px 220px;
+}
+
+/* ---------------------------------------------------------------------
+   Pita hening — pengganti section berwarna
+
+   Bagian halaman tidak lagi dibedakan dengan blok warna, melainkan
+   dengan garis rambut di antaranya. Dua pita bersebelahan otomatis
+   mendapat garis; pita pertama tidak, supaya tidak ada garis menggantung
+   tepat di bawah bilah navigasi.
+   --------------------------------------------------------------------- */
+
+.pita {
+	position: relative;
+	background-color: transparent;
+}
+
+.pita + .pita::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 50%;
+	width: min(100% - 2rem, 80rem);
+	height: 1px;
+	transform: translateX(-50%);
+	background: linear-gradient(
+		to right,
+		rgba(90, 68, 48, 0) 0%,
+		rgba(90, 68, 48, 0.18) 12%,
+		rgba(90, 68, 48, 0.18) 88%,
+		rgba(90, 68, 48, 0) 100%
+	);
+}
+
+/* Pita yang sesekali perlu sedikit lebih terang dari dasarnya — dipakai
+   hemat, satu atau dua kali per halaman, bukan berselang-seling. */
+.pita--terang {
+	background-color: rgba(250, 247, 242, 0.62);
+}
+
+/* ---------------------------------------------------------------------
+   Kartu kertas
+
+   Putih pekat membuat kartu tampak seperti tempelan. Lapisan tembus
+   pandang membiarkan butiran dasar terlihat samar menembusnya, sehingga
+   kartu terasa bagian dari bahan yang sama.
+   --------------------------------------------------------------------- */
+
+.kartu-kertas {
+	background-color: rgba(255, 253, 250, 0.78);
+	border: 1px solid rgba(90, 68, 48, 0.1);
+	box-shadow:
+		0 1px 2px rgba(37, 27, 18, 0.04),
+		0 18px 32px -26px rgba(37, 27, 18, 0.45);
+	transition: box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kartu-kertas:hover {
+	box-shadow:
+		0 1px 2px rgba(37, 27, 18, 0.05),
+		0 26px 44px -28px rgba(37, 27, 18, 0.55);
+}
+
+/* Garis rambut serba guna, sewarna tinta yang memudar. */
+.garis-tinta {
+	border-color: rgba(90, 68, 48, 0.14);
+}
+
+/* Kertas tidak perlu dicetak di atas kertas. */
+@media print {
+	body::before,
+	body::after {
+		display: none;
+	}
 }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Book;
+use App\Rules\BerkasPdfAman;
 use App\Rules\DeskripsiAman;
 use App\Rules\PolaTeks;
 use App\Support\PdfHelper;
@@ -12,9 +14,14 @@ use Illuminate\Http\UploadedFile;
  */
 class StoreBukuRequest extends BukuRequest
 {
+    /**
+     * Wewenang diserahkan kepada BookPolicy::create(), sama seperti
+     * pemeriksaan di BukuController::store(). Keduanya bertanya, satu
+     * tempat yang menjawab.
+     */
     public function authorize(): bool
     {
-        return $this->user()?->isAdmin() ?? false;
+        return $this->user()?->can('create', Book::class) ?? false;
     }
 
     /**
@@ -28,7 +35,7 @@ class StoreBukuRequest extends BukuRequest
             'description' => ['nullable', 'string', 'max:2000', new DeskripsiAman],
             'lingkup' => ['required', 'in:prodi,umum'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-            'berkas' => ['required', 'file', 'mimes:pdf', 'max:30720'],
+            'berkas' => ['required', 'file', 'mimes:pdf', 'max:30720', new BerkasPdfAman],
             'sampul' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'access_mode' => ['required', 'in:full,partial,readonly'],
             'download_page_start' => ['nullable', 'integer', 'min:1'],

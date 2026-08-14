@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-display text-xl font-semibold leading-tight text-kabut-800">
+        <h2 class="font-display text-xl font-semibold leading-tight text-kabut-50">
             Beranda Dosen &middot; {{ auth()->user()->prodi?->name }}
         </h2>
     </x-slot>
@@ -10,9 +10,9 @@
             <x-alert-status />
 
             {{-- Kode akses pendaftaran mahasiswa --}}
-            <div class="mb-8 border border-kabut-200 bg-white p-6">
-                <h3 class="font-display text-lg font-semibold text-kabut-900">Kode Akses Program Studi</h3>
-                <p class="mt-1 text-sm text-kabut-500">
+            <div class="mb-8 border border-sepia-700 bg-sepia-800/50 backdrop-blur-sm p-6 rounded-lg">
+                <h3 class="font-display text-lg font-semibold text-kabut-50">Kode Akses Program Studi</h3>
+                <p class="mt-1 text-sm text-kabut-400">
                     Bagikan kode ini kepada mahasiswa Anda. Mereka memakainya saat mendaftar agar otomatis
                     masuk ke program studi {{ auth()->user()->prodi->name }}.
                 </p>
@@ -37,14 +37,14 @@
             @php($prodiDosen = auth()->user()->prodi)
 
 @if ($prodiDosen)
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4 border border-kabut-200 bg-white p-5">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4 border border-sepia-700 bg-sepia-800/50 backdrop-blur-sm p-5 rounded-lg">
         <div>
-            <p class="font-display text-base font-semibold text-kabut-900">Sakelar unduhan {{ $prodiDosen->name }}</p>
-            <p class="mt-1 text-sm text-kabut-600">
+            <p class="font-display text-base font-semibold text-kabut-50">Sakelar unduhan {{ $prodiDosen->name }}</p>
+            <p class="mt-1 text-sm text-kabut-400">
                 @if ($prodiDosen->download_enabled)
-                    Mahasiswa program studi Anda <strong class="text-emerald-800">dapat mengunduh</strong> sesuai aturan tiap buku.
+                    Mahasiswa program studi Anda <strong class="text-emerald-400">dapat mengunduh</strong> sesuai aturan tiap buku.
                 @else
-                    Seluruh unduhan <strong class="text-red-800">sedang dinonaktifkan</strong>. Buku tetap dapat dibaca di peramban.
+                    Seluruh unduhan <strong class="text-red-400">sedang dinonaktifkan</strong>. Buku tetap dapat dibaca langsung di situs.
                 @endif
             </p>
         </div>
@@ -66,47 +66,47 @@
     </div>
 @endif
 
-            <div class="grid gap-px border border-kabut-200 bg-kabut-200 sm:grid-cols-3">
-                <div class="bg-white p-5">
-                    <p class="text-sm text-kabut-500">Buku prodi Anda</p>
-                    <p class="mt-1 font-display text-3xl font-semibold text-kabut-900">{{ $jumlahBukuProdi }}</p>
+            <div class="grid gap-px border border-sepia-700 bg-sepia-700 sm:grid-cols-3">
+                <div class="bg-sepia-800/50 backdrop-blur-sm p-5 rounded-tl-lg">
+                    <p class="text-sm text-kabut-400">Buku prodi Anda</p>
+                    <p class="mt-1 font-display text-3xl font-semibold text-kabut-50">{{ $jumlahBukuProdi }}</p>
                 </div>
-                <div class="bg-white p-5">
-                    <p class="text-sm text-kabut-500">Buku umum</p>
-                    <p class="mt-1 font-display text-3xl font-semibold text-kabut-900">{{ $jumlahBukuUmum }}</p>
+                <div class="bg-sepia-800/50 backdrop-blur-sm p-5">
+                    <p class="text-sm text-kabut-400">Buku umum</p>
+                    <p class="mt-1 font-display text-3xl font-semibold text-kabut-50">{{ $jumlahBukuUmum }}</p>
                 </div>
-                <div class="bg-white p-5">
-                    <p class="text-sm text-kabut-500">Kategori tersedia</p>
-                    <p class="mt-1 font-display text-3xl font-semibold text-kabut-900">{{ $jumlahKategori }}</p>
+                <div class="bg-sepia-800/50 backdrop-blur-sm p-5 rounded-tr-lg">
+                    <p class="text-sm text-kabut-400">Kategori tersedia</p>
+                    <p class="mt-1 font-display text-3xl font-semibold text-kabut-50">{{ $jumlahKategori }}</p>
                 </div>
             </div>
 
             <div class="mt-6 flex flex-wrap gap-3">
                 <a href="{{ route('admin.buku.create') }}"
-                   class="rounded-sm bg-jingga-600 px-4 py-2 text-sm font-semibold text-white hover:bg-jingga-700">
+                   class="rounded-sm bg-jingga-600 px-4 py-2 text-sm font-semibold text-white hover:bg-jingga-500">
                     Unggah Buku Baru
                 </a>
                 <a href="{{ route('admin.kategori.index') }}"
-                   class="rounded-sm border border-kabut-300 bg-white px-4 py-2 text-sm font-semibold text-kabut-700 hover:bg-kabut-100">
+                   class="rounded-sm border border-sepia-600 bg-sepia-800 px-4 py-2 text-sm font-semibold text-kabut-300 hover:bg-sepia-700">
                     Kelola Kategori
                 </a>
             </div>
 
-            <h3 class="mt-10 font-display text-lg font-semibold text-kabut-900">Unggahan terbaru</h3>
+            <h3 class="mt-10 font-display text-lg font-semibold text-kabut-50">Unggahan terbaru</h3>
 
-            <ul class="mt-3 divide-y divide-kabut-200 border border-kabut-200 bg-white">
+            <ul class="mt-3 divide-y divide-sepia-700 border border-sepia-700 bg-sepia-800/50 backdrop-blur-sm rounded-lg overflow-hidden">
                 @forelse ($bukuTerbaru as $buku)
                     <li class="flex items-center justify-between px-5 py-4">
                         <div>
-                            <p class="text-sm font-semibold text-kabut-900">{{ $buku->title }}</p>
-                            <p class="text-xs text-kabut-500">
+                            <p class="text-sm font-semibold text-kabut-50">{{ $buku->title }}</p>
+                            <p class="text-xs text-kabut-400">
                                 {{ $buku->prodi?->name ?? 'Umum' }} &middot; {{ $buku->labelAkses() }}
                             </p>
                         </div>
-                        <span class="text-xs text-kabut-400">{{ $buku->created_at->diffForHumans() }}</span>
+                        <span class="text-xs text-kabut-500">{{ $buku->created_at->diffForHumans() }}</span>
                     </li>
                 @empty
-                    <li class="px-5 py-8 text-center text-sm text-kabut-500">Belum ada buku yang diunggah.</li>
+                    <li class="px-5 py-8 text-center text-sm text-kabut-400">Belum ada buku yang diunggah.</li>
                 @endforelse
             </ul>
         </div>

@@ -2,8 +2,14 @@
 // Prinsipnya sederhana: hanya aset statis bernama-hash yang disimpan di cache.
 // Halaman, berkas PDF, dan semua permintaan lain selalu diambil dari jaringan
 // agar pembaruan kode langsung terasa dan berkas privat tidak pernah tersimpan.
+//
+// WAJIB DIBACA SEBELUM MENERBITKAN VERSI BARU:
+// Naikkan angka pada NAMA_CACHE setiap kali aplikasi di-deploy. Angka itulah
+// satu-satunya cara cache lama — beserta seluruh sisa berkas build sebelumnya
+// — dibuang dari perangkat pengguna. Bila tidak dinaikkan, sampahnya menumpuk
+// tanpa batas di ponsel mahasiswa.
 
-const NAMA_CACHE = 'pustaka-dosen-v3'
+const NAMA_CACHE = 'pustaka-dosen-v4'
 const HALAMAN_LURING = '/offline.html'
 
 /**
@@ -46,6 +52,43 @@ function asetStatis(pathname) {
 	)
 }
 
+/**
+ * Memutuskan apakah sebuah jawaban layak diawetkan.
+ *
+ * Pemeriksaan `respons.ok` saja TIDAK CUKUP, dan ini bukan kehati-hatian
+ * berlebihan — kami sudah pernah tertimpa akibatnya. Apache sempat menyajikan
+ * berkas .mjs dengan status 200 tetapi tanpa Content-Type sama sekali. Status
+ * 200 membuat `ok` bernilai benar, jawaban cacat itu tersimpan, dan halaman
+ * baca rusak berhari-hari — bahkan setelah servernya sendiri diperbaiki,
+ * karena yang disajikan bukan lagi jawaban server melainkan salinan busuk
+ * dari cache. Pengguna tidak punya cara memperbaikinya sendiri.
+ *
+ * Karena itu tipe isinya ikut diperiksa, dan khusus untuk skrip dan gaya
+ * tipenya harus benar-benar cocok.
+ */
+function layakDisimpan(respons, permintaan) {
+	if (!respons || respons.status !== 200 || respons.type !== 'basic') {
+		return false
+	}
+
+	const tipe = (respons.headers.get('content-type') || '').toLowerCase()
+	if (!tipe) {
+		return false
+	}
+
+	const tujuan = permintaan.destination
+
+	if (tujuan === 'script' || tujuan === 'worker' || tujuan === 'sharedworker') {
+		return tipe.includes('javascript') || tipe.includes('ecmascript')
+	}
+
+	if (tujuan === 'style') {
+		return tipe.includes('text/css')
+	}
+
+	return true
+}
+
 self.addEventListener('fetch', (peristiwa) => {
 	const permintaan = peristiwa.request
 	const alamat = new URL(permintaan.url)
@@ -72,16 +115,35 @@ self.addEventListener('fetch', (peristiwa) => {
 	if (asetStatis(alamat.pathname)) {
 		peristiwa.respondWith(
 			caches.match(permintaan).then((tersimpan) => {
-				if (tersimpan) return tersimpan
+				// Penyembuhan diri: entri lama yang cacat dibuang, bukan disajikan.
+				// Tanpa ini, satu jawaban busuk yang terlanjur tersimpan oleh versi
+				// service worker sebelumnya akan hidup selamanya di perangkat itu.
+				if (tersimpan && layakDisimpan(tersimpan, permintaan)) {
+					return tersimpan
+				}
 
-				return fetch(permintaan).then((respons) => {
-					if (respons.ok) {
-						const salinan = respons.clone()
-						caches.open(NAMA_CACHE).then((cache) => cache.put(permintaan, salinan))
-					}
+				if (tersimpan) {
+					caches.open(NAMA_CACHE).then((cache) => cache.delete(permintaan))
+				}
 
-					return respons
-				})
+				return fetch(permintaan)
+					.then((respons) => {
+						if (layakDisimpan(respons, permintaan)) {
+							const salinan = respons.clone()
+							caches.open(NAMA_CACHE).then((cache) => cache.put(permintaan, salinan))
+						}
+
+						return respons
+					})
+					.catch((galat) => {
+						// Jaringan mati dan salinannya cacat: salinan cacat masih lebih
+						// baik daripada tidak ada jawaban sama sekali.
+						if (tersimpan) {
+							return tersimpan
+						}
+
+						throw galat
+					})
 			}),
 		)
 		return
