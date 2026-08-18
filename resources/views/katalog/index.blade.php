@@ -45,7 +45,7 @@
          Tetap form GET biasa: bekerja tanpa JavaScript, bisa disalin sebagai
          tautan, dan bisa ditandai sebagai favorit peramban.
          ===================================================================== --}}
-    <section class="border-b border-sepia-700 bg-sepia-800/50 backdrop-blur-sm">
+    <section class="border-b border-sepia-700 glass-header">
         <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             <form method="GET" action="{{ route('katalog.index') }}"
                   class="grid gap-4 lg:grid-cols-12 lg:items-end">
@@ -90,7 +90,7 @@
 
                 <div class="flex items-center gap-4 lg:col-span-1">
                     <button type="submit"
-                            class="w-full cursor-pointer rounded bg-jingga-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-jingga-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sepia-900 motion-reduce:transition-none">
+                            class="w-full cursor-pointer rounded bg-jingga-600 px-4 py-2 text-sm font-semibold text-white hover:bg-jingga-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-500 focus-visible:ring-offset-2 focus-visible:ring-offset-sepia-900 hover-lift btn-press">
                         Cari
                     </button>
                 </div>
@@ -153,7 +153,7 @@
             @else
                 <ol class="border-t border-sepia-700" data-tahap="55">
                     @foreach ($daftarBuku as $i => $buku)
-                        <li class="group border-b border-sepia-700 transition-colors duration-200 hover:bg-sepia-800/30 motion-reduce:transition-none"
+                        <li class="group border-b border-sepia-700 list-item-modern"
                             data-muncul>
                             <div class="flex items-start gap-4 py-6 sm:gap-8">
 
@@ -171,17 +171,17 @@
                                 <div class="min-w-0 flex-1">
                                     <div class="flex flex-wrap items-center gap-1.5">
                                         @if ($buku->isUmum())
-                                            <span class="rounded border border-sepia-600 bg-sepia-800 px-2 py-0.5 text-[11px] font-medium text-sepia-300">Umum</span>
+                                            <span class="rounded border border-sepia-600 bg-sepia-800 px-2 py-0.5 text-[11px] font-medium text-sepia-300 badge-category">Umum</span>
                                         @else
-                                            <span class="rounded border border-jingga-600/50 bg-jingga-900/30 px-2 py-0.5 text-[11px] font-medium text-jingga-300">{{ $buku->prodi?->name ?? 'Umum' }}</span>
+                                            <span class="rounded border border-jingga-600/50 bg-jingga-900/30 px-2 py-0.5 text-[11px] font-medium text-jingga-300 badge-category">{{ $buku->prodi?->name ?? 'Umum' }}</span>
                                         @endif
 
                                         @if ($buku->category)
-                                            <span class="rounded border border-sepia-600 bg-sepia-800 px-2 py-0.5 text-[11px] font-medium text-kabut-400">{{ $buku->category->name }}</span>
+                                            <span class="rounded border border-sepia-600 bg-sepia-800 px-2 py-0.5 text-[11px] font-medium text-kabut-400 badge-category">{{ $buku->category->name }}</span>
                                         @endif
 
                                         @if ($buku->created_at && $buku->created_at->gt(now()->subDays(14)))
-                                            <span class="text-[11px] font-semibold uppercase tracking-wider text-jingga-400">Baru</span>
+                                            <span class="rounded px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider badge-new">Baru</span>
                                         @endif
                                     </div>
 

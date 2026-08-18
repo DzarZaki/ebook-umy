@@ -21,9 +21,15 @@ use App\Models\Prodi;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome', [
-        'daftarProdi' => Prodi::orderBy('name')->get(),
-    ]);
+    // Halaman publik: hasilnya jarang berubah, jadi disinggahkan 10 menit dan
+    // dibatasi jumlahnya. Prodi baru muncul paling lambat 10 menit kemudian.
+    $daftarProdi = cache()->remember(
+        'beranda.daftar-prodi',
+        now()->addMinutes(10),
+        fn () => Prodi::orderBy('name')->limit(60)->get()
+    );
+
+    return view('welcome', ['daftarProdi' => $daftarProdi]);
 })->name('beranda');
 
 // Pintu masuk tunggal — dialihkan sesuai peran pengguna.
@@ -159,8 +165,16 @@ Route::middleware(['auth', 'active', 'role:admin'])
         Route::patch('kode-akses', [KodeAksesController::class, 'update'])
             ->name('kode-akses.update');
 
-        // Pengelolaan akun mahasiswa
+                /*
+         * Pengelolaan akun mahasiswa.
+         *
+         * Urutan pendaftaran disengaja: `mahasiswa/{mahasiswa}/edit` didaftarkan
+         * sebelum verba tulis, dan tidak ada rute `show`, karena dosen hanya
+         * perlu menyunting — bukan melihat halaman detail terpisah.
+         */
         Route::get('mahasiswa', [MahasiswaController::class, 'index'])->name('mahasiswa.index');
+        Route::get('mahasiswa/{mahasiswa}/edit', [MahasiswaController::class, 'edit'])->name('mahasiswa.edit');
+        Route::put('mahasiswa/{mahasiswa}', [MahasiswaController::class, 'update'])->name('mahasiswa.update');
         Route::patch('mahasiswa/{mahasiswa}/status', [MahasiswaController::class, 'toggleStatus'])->name('mahasiswa.status');
         Route::delete('mahasiswa/{mahasiswa}', [MahasiswaController::class, 'destroy'])->name('mahasiswa.destroy');
     });

@@ -21,16 +21,25 @@
                             <th class="px-4 py-3 font-medium">Nama</th>
                             <th class="px-4 py-3 font-medium">Email</th>
                             <th class="px-4 py-3 font-medium">Program Studi</th>
+                            <th class="px-4 py-3 font-medium">Buku</th>
                             <th class="px-4 py-3 font-medium">Status</th>
                             <th class="px-4 py-3 text-right font-medium">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-kabut-100">
                         @forelse ($daftarDosen as $dosen)
+                            @php($jumlahBuku = (int) ($dosen->buku_diunggah_count ?? 0))
                             <tr>
                                 <td class="px-4 py-3 font-medium text-kabut-900">{{ $dosen->name }}</td>
                                 <td class="px-4 py-3 text-kabut-600">{{ $dosen->email }}</td>
                                 <td class="px-4 py-3 text-kabut-600">{{ $dosen->prodi?->name ?? '—' }}</td>
+                                <td class="px-4 py-3 text-kabut-600">
+                                    @if ($jumlahBuku > 0)
+                                        {{ $jumlahBuku }} buku
+                                    @else
+                                        <span class="text-kabut-400">—</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">
                                     @if ($dosen->is_active)
                                         <span class="rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">Aktif</span>
@@ -45,16 +54,29 @@
                                             Ubah
                                         </a>
 
-                                        <x-tombol-hapus
-                                            :action="route('superadmin.dosen.destroy', $dosen)"
-                                            judul="Hapus Akun Dosen"
-                                            :pesan="'Akun &quot;'.$dosen->name.'&quot; akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.'" />
+                                        {{--
+                                            Akun yang masih memiliki buku tidak menawarkan tombol Hapus.
+                                            Penolakannya memang sudah dijaga di controller, tetapi tombol
+                                            yang tampak bisa ditekan lalu menolak hanya membuat Super Admin
+                                            menebak-nebak sebabnya.
+                                        --}}
+                                        @if ($jumlahBuku > 0)
+                                            <span class="cursor-not-allowed rounded-sm border border-kabut-200 px-3 py-1.5 text-sm font-medium text-kabut-400"
+                                                  title="Masih tercatat sebagai pengunggah {{ $jumlahBuku }} buku. Nonaktifkan akunnya lewat tombol Ubah.">
+                                                Hapus
+                                            </span>
+                                        @else
+                                            <x-tombol-hapus
+                                                :action="route('superadmin.dosen.destroy', $dosen)"
+                                                judul="Hapus Akun Dosen"
+                                                :pesan="'Akun &quot;'.$dosen->name.'&quot; akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.'" />
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-4 py-8 text-center text-kabut-500">
+                                <td colspan="6" class="px-4 py-8 text-center text-kabut-500">
                                     Belum ada akun dosen.
                                 </td>
                             </tr>

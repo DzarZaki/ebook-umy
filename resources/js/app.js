@@ -2,6 +2,7 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 import './animasi';
 import './pwa';
+import './card-tilt';
 
 // PEMANGKAS BERKAS UTAMA
 // pdf.js dan pdf-lib adalah ±80% dari 583 kB berkas JS utama, padahal hanya

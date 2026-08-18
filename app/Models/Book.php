@@ -265,12 +265,23 @@ class Book extends Model
      * Apakah dosen tertentu boleh mengubah/menghapus buku ini?
      * Aturan sama seperti kategori.
      */
+        /**
+     * Apakah dosen tertentu boleh mengubah/menghapus buku ini?
+     * Aturan sama seperti kategori.
+     */
     public function bolehDikelolaOleh(User $user): bool
     {
         if ($this->isUmum()) {
-            return $this->uploaded_by === $user->id;
+            // Buku umum tanpa pengunggah — akun dosennya sudah dihapus —
+            // tidak menjadi milik siapa pun. Perbandingan longgar dengan
+            // NULL harus dicegah tegas di sini, sebab buku yatim yang bisa
+            // diklaim sembarang dosen justru lubang wewenang baru. Super
+            // Admin tetap dapat menanganinya lewat BookPolicy::before().
+            return $this->uploaded_by !== null
+                && (int) $this->uploaded_by === (int) $user->id;
         }
 
-        return $this->prodi_id === $user->prodi_id;
+        return $this->prodi_id !== null
+            && (int) $this->prodi_id === (int) $user->prodi_id;
     }
 }

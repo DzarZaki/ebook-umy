@@ -18,23 +18,27 @@ export default {
             },
 
             colors: {
-                // Amber emas — warna aksi premium. Menyala di atas latar gelap.
-                jingga: {
-                    50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d',
-                    400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309',
-                    800: '#92400e', 900: '#78350f',
+                // Burnt sienna — aksen tunggal untuk aksi dan penekanan.
+                // Hangat seperti kulit buku dan tinta lama, bukan oranye AI.
+                sienna: {
+                    light: '#D97556',   // lencana, state disabled
+                    DEFAULT: '#B85C38', // tombol, tautan, aksen utama
+                    dark: '#934A2D',    // hover, pressed
                 },
-                // Deep slate — struktur, heading, panel gelap.
-                sepia: {
-                    50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1',
-                    400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155',
-                    800: '#1e293b', 900: '#0f172a',
+                // Charcoal-navy — dasar gelap dengan sedikit kehangatan.
+                // Bukan hitam murni, bukan ungu-biru AI.
+                arang: {
+                    deepest: '#0B0E14', // body background
+                    deep: '#1A1D26',    // card, panel
+                    base: '#2A2E3A',    // border, divider
                 },
-                // Cool gray — teks, border, background subtle.
-                kabut: {
-                    50: '#f9fafb', 100: '#f3f4f6', 200: '#e5e7eb', 300: '#d1d5db',
-                    400: '#9ca3af', 500: '#6b7280', 600: '#4b5563', 700: '#374151',
-                    800: '#1f2937', 900: '#111827',
+                // Neutral warm — teks dan surface dengan sedikit kehangatan.
+                netral: {
+                    100: '#E8E6E3',     // text primary
+                    200: '#C8C5C0',     // text secondary (medium emphasis)
+                    300: '#9B9893',     // text tertiary (low emphasis)
+                    400: '#6B6863',     // text disabled, subtle labels
+                    500: '#4A4744',     // borders, very subtle elements
                 },
             },
 

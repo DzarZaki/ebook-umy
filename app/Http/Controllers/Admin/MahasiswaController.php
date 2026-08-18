@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateMahasiswaRequest;
+use App\Models\Prodi;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,6 +38,56 @@ class MahasiswaController extends Controller
         ]);
     }
 
+    /**
+     * Menampilkan formulir penyuntingan data mahasiswa.
+     *
+     * Penjagaannya sengaja 403, bukan 404: akun mahasiswa bukan rahasia
+     * lintas prodi (jumlahnya bisa ditebak dari daftar publik prodi),
+     * sehingga menyembunyikan keberadaannya tidak menambah keamanan —
+     * sedangkan 403 memberi pesan jujur bahwa wewenangnya yang kurang.
+     */
+    public function edit(Request $request, User $mahasiswa): View
+    {
+        $this->pastikanBoleh($request, $mahasiswa);
+
+        return view('admin.mahasiswa.edit', [
+            'mahasiswa' => $mahasiswa,
+            'daftarProdi' => Prodi::orderBy('name')->get(),
+        ]);
+    }
+
+    /**
+     * Memperbarui nama, email, dan program studi mahasiswa.
+     *
+     * Hanya tiga kolom itu yang disentuh. `role`, `is_active`, `password`, dan
+     * `email_verified_at` sengaja tidak ikut di-mass-assign di sini: status akun
+     * punya rutenya sendiri (mahasiswa.status), dan kata sandi adalah milik
+     * pengguna — dosen tidak berhak menimpanya dari halaman ini.
+     */
+    public function update(UpdateMahasiswaRequest $request, User $mahasiswa): RedirectResponse
+    {
+        $this->pastikanBoleh($request, $mahasiswa);
+
+        $data = $request->validated();
+
+        // Dihitung sebelum update, karena setelahnya nilai lamanya sudah hilang.
+        $pindahProdi = (int) $data['prodi_id'] !== (int) $mahasiswa->prodi_id;
+
+        $mahasiswa->update([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'prodi_id' => (int) $data['prodi_id'],
+        ]);
+
+        $pesan = $pindahProdi
+            ? "Data {$mahasiswa->name} berhasil diperbarui. Akun ini kini berada di program studi lain, sehingga tidak lagi muncul pada daftar Anda."
+            : "Data {$mahasiswa->name} berhasil diperbarui.";
+
+        return redirect()
+            ->route('admin.mahasiswa.index')
+            ->with('status', $pesan);
+    }
+
     /** Mengaktifkan atau menonaktifkan akun mahasiswa. */
     public function toggleStatus(Request $request, User $mahasiswa): RedirectResponse
     {
@@ -62,13 +114,21 @@ class MahasiswaController extends Controller
             ->with('status', 'Akun mahasiswa berhasil dihapus.');
     }
 
-    /** Dosen hanya boleh menyentuh akun mahasiswa di program studinya sendiri. */
+    /**
+     * Dosen hanya boleh menyentuh akun mahasiswa di program studinya sendiri.
+     *
+     * Dua syarat, bukan satu: perannya harus mahasiswa (agar rute ini tidak
+     * bisa dipakai menyunting akun dosen atau super admin yang kebetulan
+     * ber-prodi sama), dan prodinya harus persis prodi dosen tersebut.
+     */
     private function pastikanBoleh(Request $request, User $mahasiswa): void
     {
         $dosen = $request->user();
 
         abort_unless(
-            $mahasiswa->isMahasiswa() && $mahasiswa->prodi_id === $dosen->prodi_id,
+            $mahasiswa->isMahasiswa()
+                && $dosen->prodi_id !== null
+                && $mahasiswa->prodi_id === $dosen->prodi_id,
             403,
         );
     }

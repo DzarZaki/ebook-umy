@@ -7,15 +7,18 @@
 
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
     <link rel="manifest" href="/manifest.webmanifest">
-    <meta name="theme-color" content="#5f4231">
+    {{-- Warna bilah status. Harus sama dengan sepia-900 (#0f172a) di
+         tailwind.config.js, welcome.blade.php, layouts/app.blade.php, dan
+         public/manifest.webmanifest. --}}
+    <meta name="theme-color" content="#0B0E14">
     <link rel="apple-touch-icon" href="/images/icon-192.png">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|playfair-display:400,600,700&display=swap" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    {{-- Three.js CDN --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha512-dLxUelApnYxpLt6K2iomGngnHO83iUvZytA3YjDUCjT0HDOHKXnVYdf3hU4JjM8uEhxf9nD1/ey98U3t2vZ0qQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    {{-- Tidak ada lagi pustaka dari CDN di sini. Latar partikel di panel
+         kanan digambar dengan Canvas 2D di bagian bawah berkas ini. --}}
 
     <style>
         /* Ukuran headline raksasa — clamp agar menyusut di layar kecil */
@@ -48,25 +51,25 @@
         }
     </style>
 </head>
-<body class="font-sans antialiased bg-kabut-50">
+<body class="font-sans antialiased bg-netral-100">
 
     {{-- Layout utama: form kiri + branding kanan --}}
     <div class="min-h-screen lg:flex">
 
         {{-- === PANEL KIRI: FORM (~40%) === --}}
-        <main class="flex w-full flex-col justify-center bg-sepia-900 px-8 py-14 lg:w-[42%] lg:min-h-screen lg:px-14 xl:px-20">
+        <main class="flex w-full flex-col justify-center bg-arang-deepest px-8 py-14 lg:w-[42%] lg:min-h-screen lg:px-14 xl:px-20">
 
             {{-- Logo — selalu tampil --}}
             <a href="{{ url('/') }}" class="anim-fade-up mb-12 flex items-center gap-3 self-start">
                 <img src="{{ asset('images/logo.svg') }}" alt="" class="h-9 w-9">
-                <span class="font-display text-base font-semibold tracking-tight text-kabut-50">Pustaka Dosen</span>
+                <span class="font-display text-base font-semibold tracking-tight text-netral-100">Pustaka Dosen</span>
             </a>
 
             {{-- Heading form --}}
             <div class="anim-fade-up anim-delay-1 mb-8">
                 <span class="divider-editorial mb-5"></span>
-                <h2 class="font-display text-3xl font-semibold leading-tight text-kabut-50">Masuk ke<br>Akun Anda</h2>
-                <p class="mt-3 text-sm leading-relaxed text-kabut-400">Akses koleksi e-book dan materi kuliah yang disusun dosen pengampu.</p>
+                <h2 class="font-display text-3xl font-semibold leading-tight text-netral-100">Masuk ke<br>Akun Anda</h2>
+                <p class="mt-3 text-sm leading-relaxed text-netral-300">Akses koleksi e-book dan materi kuliah yang disusun dosen pengampu.</p>
             </div>
 
             {{-- Form slot --}}
@@ -75,35 +78,35 @@
             </div>
 
             {{-- Footer form --}}
-            <p class="anim-fade-up anim-delay-3 mt-10 text-xs text-kabut-500">
+            <p class="anim-fade-up anim-delay-3 mt-10 text-xs text-netral-300">
                 &copy; {{ date('Y') }} Pustaka Dosen &mdash; Koleksi pribadi dosen, akses mahasiswa terdaftar.
             </p>
         </main>
 
-        {{-- === PANEL KANAN: BRANDING + THREE.JS (~60%) === --}}
-        <aside class="relative hidden overflow-hidden bg-sepia-800 lg:flex lg:w-[58%]" aria-hidden="true">
+        {{-- === PANEL KANAN: BRANDING + LATAR PARTIKEL (~60%) === --}}
+        <aside class="relative hidden overflow-hidden bg-arang-deep lg:flex lg:w-[58%]" aria-hidden="true">
 
-            {{-- Three.js canvas — full panel --}}
+            {{-- Canvas latar — full panel --}}
             <canvas id="particles-canvas" class="absolute inset-0 z-0 h-full w-full"></canvas>
 
             {{-- Konten editorial di atas canvas --}}
             <div class="relative z-10 flex h-full flex-col justify-between px-14 py-14 xl:px-20">
 
                 {{-- Label overline atas --}}
-                <p class="text-label font-semibold uppercase tracking-[0.22em] text-jingga-400">
+                <p class="text-label font-semibold uppercase tracking-[0.22em] text-sienna-light">
                     Perpustakaan Digital
                 </p>
 
                 {{-- Headline serif raksasa —tengah vertikal --}}
                 <div class="max-w-2xl">
-                    <h1 class="headline-raksasa font-display text-kabut-50">
+                    <h1 class="headline-raksasa font-display text-netral-100">
                         Bahan<br>
-                        <em class="not-italic text-jingga-400">bacaan</em><br>
+                        <em class="not-italic text-sienna-light">bacaan</em><br>
                         kuliah,<br>
                         disusun<br>
                         dosen.
                     </h1>
-                    <p class="mt-8 max-w-xs text-sm leading-relaxed text-kabut-400">
+                    <p class="mt-8 max-w-xs text-sm leading-relaxed text-netral-300">
                         Koleksi e-book dan referensi akademik yang dikurasi langsung
                         oleh dosen pengampu. Dibaca di browser, tanpa mengunduh.
                     </p>
@@ -112,109 +115,148 @@
                 {{-- Label bawah --}}
                 <div class="flex items-center gap-6">
                     <span class="divider-editorial"></span>
-                    <p class="text-xs text-kabut-500">Akses khusus mahasiswa terdaftar</p>
+                    <p class="text-xs text-netral-300">Akses khusus mahasiswa terdaftar</p>
                 </div>
             </div>
         </aside>
 
     </div>
 
-    {{-- Three.js Particle Animation --}}
+    {{--
+        Latar partikel — Canvas 2D, tanpa pustaka luar.
+
+        Sebelumnya bagian ini memakai Three.js r128 dari cdnjs. Tag <script>
+        itu berada di <head> tanpa defer, sehingga halaman masuk tidak
+        tergambar sama sekali sampai berkas 600 KB dari server pihak ketiga
+        selesai diambil — atau sampai koneksinya timeout bila jaringan
+        kampus memblokirnya.
+
+        Isi animasinya hanya titik-titik berwarna dengan opasitas rendah:
+        tidak ada geometri 3D, cahaya, maupun tekstur, jadi Canvas 2D sudah
+        memadai. Kedalaman sumbu Z diganti variasi ukuran dan kecepatan.
+    --}}
     <script>
     (function () {
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (prefersReducedMotion) return;
-
         const canvas = document.getElementById('particles-canvas');
         if (!canvas) return;
 
-        const scene    = new THREE.Scene();
-        const camera   = new THREE.PerspectiveCamera(70, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
+        // Panel kanan hanya tampil pada lg ke atas (kelas "hidden lg:flex").
+        // Di ponsel canvas-nya berukuran nol, jadi menghitung animasi di sana
+        // hanya menghabiskan baterai tanpa satu piksel pun terlihat.
+        if (!window.matchMedia('(min-width: 1024px)').matches) return;
 
-        function resize() {
-            const w = canvas.clientWidth, h = canvas.clientHeight;
-            if (!w || !h) return;
-            renderer.setSize(w, h, false);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            camera.aspect = w / h;
-            camera.updateProjectionMatrix();
-        }
-        resize();
-        camera.position.z = 55;
+        const konteks = canvas.getContext('2d');
+        if (!konteks) return;
 
-        // Particle grid
-        const COUNT  = 280;
-        const pos    = new Float32Array(COUNT * 3);
-        const col    = new Float32Array(COUNT * 3);
-        const vel    = [];
-        const c1     = new THREE.Color(0x334155); // slate-700
-        const c2     = new THREE.Color(0xf59e0b); // amber-500
-        const c3     = new THREE.Color(0x1e293b); // slate-800
+        const JUMLAH = 280;
+        const WARNA = ['#2A2E3A', '#B85C38', '#1A1D26']; // arang-base, sienna, arang-deep
+        const OPASITAS = 0.18;
 
-        for (let i = 0; i < COUNT; i++) {
-            pos[i*3]   = (Math.random() - 0.5) * 110;
-            pos[i*3+1] = (Math.random() - 0.5) * 80;
-            pos[i*3+2] = (Math.random() - 0.5) * 30;
-            vel.push({
-                x: (Math.random() - 0.5) * 0.018,
-                y: (Math.random() - 0.5) * 0.018,
-                z: (Math.random() - 0.5) * 0.008,
-            });
-            const pick = [c1, c2, c3][i % 3];
-            col[i*3] = pick.r; col[i*3+1] = pick.g; col[i*3+2] = pick.b;
-        }
+        let lebar = 0;
+        let tinggi = 0;
+        const partikel = [];
 
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-        geo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
+        function ubahUkuran() {
+            const w = canvas.clientWidth;
+            const h = canvas.clientHeight;
+            if (!w || !h) return false;
 
-        const mat = new THREE.PointsMaterial({
-            size: 2.5,
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.18,
-            sizeAttenuation: true,
-        });
+            const rasio = Math.min(window.devicePixelRatio || 1, 2);
 
-        const points = new THREE.Points(geo, mat);
-        scene.add(points);
-
-        // Mouse parallax — hanya di panel kanan
-        let mx = 0, my = 0;
-        document.addEventListener('mousemove', (e) => {
-            mx = (e.clientX / window.innerWidth)  * 2 - 1;
-            my = -(e.clientY / window.innerHeight) * 2 + 1;
-        });
-
-        // Pause saat tab tidak aktif
-        let active = true;
-        document.addEventListener('visibilitychange', () => { active = !document.hidden; });
-
-        // Loop
-        function tick() {
-            requestAnimationFrame(tick);
-            if (!active) return;
-
-            const p = points.geometry.attributes.position.array;
-            for (let i = 0; i < COUNT; i++) {
-                p[i*3]   += vel[i].x;
-                p[i*3+1] += vel[i].y;
-                p[i*3+2] += vel[i].z;
-                if (Math.abs(p[i*3])   > 60) vel[i].x *= -1;
-                if (Math.abs(p[i*3+1]) > 45) vel[i].y *= -1;
-                if (Math.abs(p[i*3+2]) > 20) vel[i].z *= -1;
+            // Posisi partikel disimpan dalam piksel CSS; saat panel berubah
+            // ukuran, posisinya diskalakan agar sebarannya tetap merata.
+            if (lebar && tinggi) {
+                const skalaX = w / lebar;
+                const skalaY = h / tinggi;
+                for (const p of partikel) {
+                    p.x *= skalaX;
+                    p.y *= skalaY;
+                }
             }
-            points.geometry.attributes.position.needsUpdate = true;
 
-            points.rotation.x += (my * 0.04 - points.rotation.x) * 0.04;
-            points.rotation.y += (mx * 0.04 - points.rotation.y) * 0.04;
+            lebar = w;
+            tinggi = h;
+            canvas.width = Math.round(w * rasio);
+            canvas.height = Math.round(h * rasio);
+            konteks.setTransform(rasio, 0, 0, rasio, 0, 0);
 
-            renderer.render(scene, camera);
+            return true;
         }
-        tick();
 
-        window.addEventListener('resize', resize);
+        if (!ubahUkuran()) return;
+
+        for (let i = 0; i < JUMLAH; i++) {
+            // Pengganti sumbu Z: makin "dekat", makin besar dan makin cepat.
+            const kedalaman = 0.35 + Math.random() * 0.65;
+
+            partikel.push({
+                x: Math.random() * lebar,
+                y: Math.random() * tinggi,
+                dx: (Math.random() - 0.5) * 0.3 * kedalaman,
+                dy: (Math.random() - 0.5) * 0.3 * kedalaman,
+                jari: (0.9 + Math.random() * 1.4) * kedalaman,
+                warna: WARNA[i % WARNA.length],
+                kedalaman: kedalaman,
+            });
+        }
+
+        let mx = 0, my = 0, tujuanX = 0, tujuanY = 0;
+
+        function gambar() {
+            konteks.clearRect(0, 0, lebar, tinggi);
+            konteks.globalAlpha = OPASITAS;
+
+            for (const p of partikel) {
+                const gx = p.x + mx * 14 * p.kedalaman;
+                const gy = p.y + my * 14 * p.kedalaman;
+
+                konteks.beginPath();
+                konteks.arc(gx, gy, p.jari, 0, Math.PI * 2);
+                konteks.fillStyle = p.warna;
+                konteks.fill();
+            }
+        }
+
+        // Hormati preferensi sistem: satu frame diam, lalu berhenti. Panel
+        // tetap punya tekstur, tanpa gerakan sama sekali.
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            gambar();
+            window.addEventListener('resize', () => { if (ubahUkuran()) gambar(); });
+
+            return;
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            tujuanX = (e.clientX / window.innerWidth) * 2 - 1;
+            tujuanY = (e.clientY / window.innerHeight) * 2 - 1;
+        }, { passive: true });
+
+        let aktif = !document.hidden;
+        document.addEventListener('visibilitychange', () => { aktif = !document.hidden; });
+
+        function langkah() {
+            requestAnimationFrame(langkah);
+            if (!aktif) return;
+
+            mx += (tujuanX - mx) * 0.04;
+            my += (tujuanY - my) * 0.04;
+
+            for (const p of partikel) {
+                p.x += p.dx;
+                p.y += p.dy;
+
+                // Keluar satu sisi, masuk dari sisi seberang.
+                if (p.x < -4) p.x = lebar + 4;
+                else if (p.x > lebar + 4) p.x = -4;
+                if (p.y < -4) p.y = tinggi + 4;
+                else if (p.y > tinggi + 4) p.y = -4;
+            }
+
+            gambar();
+        }
+
+        requestAnimationFrame(langkah);
+        window.addEventListener('resize', ubahUkuran);
     })();
     </script>
 </body>

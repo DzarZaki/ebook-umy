@@ -5,11 +5,14 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SuperAdmin\StoreDosenRequest;
 use App\Http\Requests\SuperAdmin\UpdateDosenRequest;
+use App\Models\Book;
 use App\Models\Prodi;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 /**
@@ -67,7 +70,7 @@ class DosenController extends Controller
      */
     public function edit(User $user): View
     {
-        abort_unless($user->isAdmin(), 404);
+        $this->pastikanAkunDosen($user);
 
         return view('superadmin.dosen.edit', [
             'dosen' => $user,
@@ -86,6 +89,8 @@ class DosenController extends Controller
                 ->withErrors(['is_active' => 'Anda tidak dapat menonaktifkan akun Anda sendiri.'])
                 ->with('gagal', 'Anda tidak dapat menonaktifkan akun Anda sendiri.');
         }
+
+        $this->pastikanAkunDosen($user);
 
         $perubahan = [
             'name' => $data['name'],
@@ -123,10 +128,56 @@ class DosenController extends Controller
                 ->with('gagal', 'Harus tersisa minimal satu Super Admin.');
         }
 
+        $this->pastikanAkunDosen($user);
+
+                /*
+         * Akun yang masih tercatat sebagai pengunggah tidak dihapus.
+         *
+         * Sejak books.uploaded_by memakai nullOnDelete, penghapusan akun tidak
+         * lagi melenyapkan bukunya — itu jaring pengaman di lapis database.
+         * Penjagaan di sini menjawab kerugian yang tetap terjadi: jejak siapa
+         * pengunggah sebuah buku hilang selamanya, dan buku umum (tanpa prodi)
+         * berubah menjadi yatim yang tak dapat dikelola dosen mana pun, karena
+         * hak atas buku umum ditentukan oleh kolom uploaded_by itu sendiri.
+         *
+         * withTrashed() disertakan dengan sengaja: buku di tempat sampah masih
+         * dapat dipulihkan selama masa tenggang, jadi ia belum kehilangan hak
+         * atas pengunggahnya.
+         */
+        $jumlahBuku = Book::withTrashed()->where('uploaded_by', $user->id)->count();
+
+        if ($jumlahBuku > 0) {
+            $pesan = "Akun \"{$user->name}\" masih tercatat sebagai pengunggah {$jumlahBuku} buku, "
+                .'sehingga tidak dapat dihapus. Nonaktifkan akunnya lewat tombol Ubah — '
+                .'akun nonaktif tidak dapat masuk, tetapi bukunya tetap terurus.';
+
+            return back()
+                ->withErrors(['dosen' => $pesan])
+                ->with('gagal', $pesan);
+        }
+
         $user->delete();
 
         return redirect()
             ->route('superadmin.dosen.index')
             ->with('status', 'Akun dosen berhasil dihapus.');
+    }
+
+    /**
+     * Halaman ini hanya mengelola akun Dosen, yaitu pengguna berperan `admin`.
+     *
+     * Rute `superadmin/dosen/{user}` menerima id pengguna apa pun, sehingga
+     * tanpa penjagaan ini satu permintaan DELETE ke id seorang mahasiswa akan
+     * menghapus akun itu beserta seluruh kemajuan bacaan, penanda, dan koleksi
+     * yang terkait — semuanya lewat halaman yang tidak pernah menampilkan
+     * mahasiswa. Akun Super Admin lain juga ditolak: pemindahan peran itu
+     * urusan yang lebih besar daripada formulir dosen.
+     *
+     * Dipakai 404, bukan 403, agar sama dengan perilaku `edit()` dan agar
+     * keberadaan sebuah id tidak bocor dari perbedaan kode jawaban.
+     */
+    private function pastikanAkunDosen(User $user): void
+    {
+        abort_unless($user->isAdmin(), 404);
     }
 }

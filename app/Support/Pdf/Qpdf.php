@@ -21,6 +21,11 @@ use Throwable;
  * Seluruh method di sini menerima dan mengembalikan **jalur absolut** pada
  * filesystem, bukan jalur relatif milik Storage. Pemanggil bertanggung jawab
  * mengubahnya lebih dulu, misalnya dengan Storage::disk('local')->path(...).
+ *
+ * Kelas ini tidak hanya menjawab "apakah qpdf ada", tetapi juga menyimpan
+ * SEBAB ketiadaannya. Perbedaan itu penting: "qpdf tidak tersedia" membuat
+ * orang menebak-nebak, sedangkan "tidak ada berkas program pada jalur
+ * D:/qpdf 12.3.2/bin/qpdf.exe" langsung menunjuk berkas .env yang salah.
  */
 class Qpdf
 {
@@ -28,6 +33,9 @@ class Qpdf
     private ?bool $tersedia = null;
 
     private ?string $versi = null;
+
+    /** Sebab pemeriksaan terakhir gagal; null bila qpdf memang dapat dipakai. */
+    private ?string $alasan = null;
 
     public function __construct(
         private readonly string $binary,
@@ -44,6 +52,12 @@ class Qpdf
         );
     }
 
+    /** Jalur atau nama program sebagaimana disetel lewat QPDF_BINARY. */
+    public function binary(): string
+    {
+        return $this->binary;
+    }
+
     /**
      * Apakah qpdf benar-benar bisa dijalankan di server ini?
      *
@@ -57,30 +71,47 @@ class Qpdf
             return $this->tersedia;
         }
 
+        /*
+         * Pemeriksaan termurah lebih dulu.
+         *
+         * Bila QPDF_BINARY ditulis sebagai jalur — dan .env.example dulu
+         * memang berisi jalur milik satu komputer Windows — keberadaannya
+         * dapat dipastikan tanpa menjalankan proses apa pun. Selain lebih
+         * cepat, pesannya juga menyebut jalur yang salah itu, bukan sekadar
+         * "kode keluar 127" yang tidak menolong siapa pun.
+         *
+         * Nama polos seperti "qpdf" sengaja dilewati dari pemeriksaan ini,
+         * karena ia dicari di PATH — hanya proses yang tahu hasilnya.
+         */
+        if ($this->berbentukJalur() && ! is_file($this->binary)) {
+            return $this->tandaiTidakTersedia(
+                "tidak ada berkas program pada jalur yang disetel: {$this->binary}"
+            );
+        }
+
         try {
             // Sengaja memakai batas waktu pendek: ini hanya pemeriksaan versi.
             $hasil = Process::timeout(10)->run([$this->binary, '--version']);
         } catch (Throwable $galat) {
-            Log::warning('qpdf tidak dapat dijalankan.', [
-                'binary' => $this->binary,
-                'pesan' => $galat->getMessage(),
-            ]);
-
-            return $this->tersedia = false;
+            return $this->tandaiTidakTersedia(
+                "program tidak dapat dijalankan ({$this->binary}): {$galat->getMessage()}"
+            );
         }
 
         if (! $hasil->successful()) {
-            Log::warning('qpdf menjawab dengan kode galat saat diperiksa.', [
-                'binary' => $this->binary,
-                'kode' => $hasil->exitCode(),
-                'keluaran' => $hasil->errorOutput() ?: $hasil->output(),
-            ]);
+            $keluaran = trim($hasil->errorOutput() ?: $hasil->output());
 
-            return $this->tersedia = false;
+            return $this->tandaiTidakTersedia(sprintf(
+                'program menjawab dengan kode galat %d (%s)%s',
+                (int) $hasil->exitCode(),
+                $this->binary,
+                $keluaran === '' ? '' : ': '.$keluaran,
+            ));
         }
 
         $baris = preg_split('/\R/', trim($hasil->output())) ?: [];
         $this->versi = $baris[0] ?? null;
+        $this->alasan = null;
 
         return $this->tersedia = true;
     }
@@ -91,6 +122,54 @@ class Qpdf
         $this->tersedia();
 
         return $this->versi;
+    }
+
+    /**
+     * Sebab qpdf dianggap tidak dapat dipakai; null bila tidak ada masalah.
+     *
+     * Dipakai pemanggil untuk menulis log yang bisa ditindaklanjuti, dan oleh
+     * perintah ebook:periksa-qpdf untuk melapor ke layar.
+     */
+    public function alasanTidakTersedia(): ?string
+    {
+        $this->tersedia();
+
+        return $this->alasan;
+    }
+
+    /**
+     * Rangkuman keadaan untuk keperluan pemeriksaan dan pencatatan.
+     *
+     * @return array{tersedia: bool, binary: string, timeout: int, versi: ?string, alasan: ?string}
+     */
+    public function diagnosa(): array
+    {
+        $tersedia = $this->tersedia();
+
+        return [
+            'tersedia' => $tersedia,
+            'binary' => $this->binary,
+            'timeout' => $this->timeout,
+            'versi' => $this->versi,
+            'alasan' => $this->alasan,
+        ];
+    }
+
+    /**
+     * Menuntut qpdf tersedia, atau melempar galat yang menyebut sebabnya.
+     *
+     * @throws RuntimeException
+     */
+    public function pastikanTersedia(): void
+    {
+        if ($this->tersedia()) {
+            return;
+        }
+
+        throw new RuntimeException(
+            'Program qpdf tidak tersedia di server ini, sehingga berkas tidak dapat diolah. '
+            .'Sebab: '.($this->alasan ?? 'tidak diketahui').'.'
+        );
     }
 
     /**
@@ -172,8 +251,9 @@ class Qpdf
      * Menjalankan qpdf dengan argumen berbentuk array.
      *
      * Bentuk array dipilih agar jalur berisi spasi — misalnya
-     * "D:/qpdf 12.3.2/bin/qpdf.exe" — tidak perlu diberi tanda kutip
-     * manual dan tidak bisa disalahgunakan sebagai injeksi perintah.
+     * "C:/Program Files/qpdf 12.3.2/bin/qpdf.exe" — tidak perlu diberi
+     * tanda kutip manual dan tidak bisa disalahgunakan sebagai injeksi
+     * perintah.
      *
      * @param  array<int, string>  $argumen
      */
@@ -181,9 +261,9 @@ class Qpdf
     {
         if (! $this->tersedia()) {
             if ($wajibBerhasil) {
-                throw new RuntimeException(
-                    'Program qpdf tidak tersedia di server ini, sehingga berkas tidak dapat diolah.'
-                );
+                // Melempar lewat pastikanTersedia() supaya pesannya memuat
+                // sebab yang sebenarnya, bukan kalimat umum.
+                $this->pastikanTersedia();
             }
 
             return null;
@@ -220,6 +300,24 @@ class Qpdf
         }
 
         return $hasil;
+    }
+
+    /** Apakah QPDF_BINARY ditulis sebagai jalur, bukan nama program di PATH? */
+    private function berbentukJalur(): bool
+    {
+        return str_contains($this->binary, '/') || str_contains($this->binary, '\\');
+    }
+
+    private function tandaiTidakTersedia(string $alasan): bool
+    {
+        $this->alasan = $alasan;
+
+        Log::warning('qpdf tidak dapat dipakai.', [
+            'binary' => $this->binary,
+            'alasan' => $alasan,
+        ]);
+
+        return $this->tersedia = false;
     }
 
     private function pastikanBerkasAda(string $jalur): void

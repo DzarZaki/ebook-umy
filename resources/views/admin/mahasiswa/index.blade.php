@@ -46,27 +46,31 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-kabut-500">{{ $mahasiswa->created_at->translatedFormat('d M Y') }}</td>
-                        <td class="px-4 py-3 text-right">
-    <div class="flex items-center justify-end gap-3">
-        <x-tombol-konfirmasi
-            :form-id="'form-status-'.$mahasiswa->id"
-            :label="$mahasiswa->is_active ? 'Nonaktifkan' : 'Aktifkan'"
-            judul="Ubah Status Akun"
-            :pesan="'Anda akan '.($mahasiswa->is_active ? 'menonaktifkan' : 'mengaktifkan').' akun '.$mahasiswa->name.'. Lanjutkan?'" />
 
-        {{-- Komponen ini membuat formulir hapusnya sendiri, cukup diberi alamat tujuan. --}}
-        <x-tombol-hapus
-            :action="route('admin.mahasiswa.destroy', $mahasiswa)"
-            judul="Hapus Akun Mahasiswa"
-            :pesan="'Akun '.$mahasiswa->name.' akan dihapus permanen. Lanjutkan?'" />
-    </div>
+                            <td class="px-4 py-3 text-right">
+                                <div class="flex items-center justify-end gap-3">
+                                    <a href="{{ route('admin.mahasiswa.edit', $mahasiswa) }}"
+                                       class="text-sm font-medium text-jingga-700 underline hover:text-jingga-900">Ubah</a>
 
-    {{-- Formulir tersembunyi khusus tombol ubah status. --}}
-    <form id="form-status-{{ $mahasiswa->id }}" method="POST"
-          action="{{ route('admin.mahasiswa.status', $mahasiswa) }}" class="hidden">
-        @csrf @method('PATCH')
-    </form>
-</td>
+                                    <x-tombol-konfirmasi
+                                        :form-id="'form-status-'.$mahasiswa->id"
+                                        :label="$mahasiswa->is_active ? 'Nonaktifkan' : 'Aktifkan'"
+                                        judul="Ubah Status Akun"
+                                        :pesan="'Anda akan '.($mahasiswa->is_active ? 'menonaktifkan' : 'mengaktifkan').' akun '.$mahasiswa->name.'. Lanjutkan?'" />
+
+                                    {{-- Komponen ini membuat formulir hapusnya sendiri, cukup diberi alamat tujuan. --}}
+                                    <x-tombol-hapus
+                                        :action="route('admin.mahasiswa.destroy', $mahasiswa)"
+                                        judul="Hapus Akun Mahasiswa"
+                                        :pesan="'Akun '.$mahasiswa->name.' akan dihapus permanen. Lanjutkan?'" />
+                                </div>
+
+                                {{-- Formulir tersembunyi khusus tombol ubah status. --}}
+                                <form id="form-status-{{ $mahasiswa->id }}" method="POST"
+                                      action="{{ route('admin.mahasiswa.status', $mahasiswa) }}" class="hidden">
+                                    @csrf @method('PATCH')
+                                </form>
+                            </td>
                         </tr>
                     @empty
                         <tr>

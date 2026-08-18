@@ -12,9 +12,11 @@
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
     <link rel="manifest" href="/manifest.webmanifest">
 
-    {{-- Warna bilah aplikasi saat dipasang sebagai PWA. Nilainya diselaraskan
-         dengan sepia-700 palet baru; sebelumnya #5f4231 dari palet lama. --}}
-    <meta name="theme-color" content="#0f172a">
+           {{-- Warna bilah aplikasi saat dipasang sebagai PWA: sepia-900 (#0f172a).
+         Nilai ini harus sama di welcome.blade.php, layouts/guest.blade.php,
+         dan public/manifest.webmanifest — kalau berbeda, bilah status ponsel
+         berubah warna saat pengguna berpindah halaman. --}}
+    <meta name="theme-color" content="#0B0E14">
     <link rel="apple-touch-icon" href="/images/icon-192.png">
 
     <link rel="preconnect" href="https://fonts.bunny.net">

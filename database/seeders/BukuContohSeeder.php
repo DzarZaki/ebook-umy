@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Mengisi katalog dengan 18 buku contoh untuk menguji tata letak.
@@ -23,13 +24,19 @@ use Illuminate\Support\Str;
  *
  * Aman dijalankan berulang: buku yang slug-nya sudah ada dilewati.
  *
- * PERINGATAN PENTING soal berkas. Bila di basis data sudah ada buku
- * sungguhan, seluruh buku contoh akan MENUNJUK BERKAS PDF YANG SAMA agar
- * dapat benar-benar dibuka di pembaca. Berkasnya tidak diduplikasi.
- * Akibatnya: jangan pernah menghapus permanen salah satu buku contoh
- * lewat Tempat Sampah atau `ebook:bersihkan-buku`, karena penghapus
- * berkas akan melenyapkan PDF yang masih dipakai buku lain — termasuk
- * buku asli Anda. Cara membuang buku contoh ada di komentar paling bawah.
+  * Soal berkas. Bila di basis data sudah ada buku sungguhan, PDF dan
+ * sampulnya DISALIN untuk tiap buku contoh, bukan dipakai bersama, supaya
+ * setiap buku contoh memiliki berkasnya sendiri. Dengan begitu membuang
+ * buku contoh lewat Tempat Sampah maupun `ebook:bersihkan-buku` menjadi
+ * aman: yang terhapus hanya salinan.
+ *
+ * Ongkosnya ruang disk — 18 × ukuran PDF sumber, jadi PDF 10 MB berarti
+ * sekitar 180 MB. Itu sebabnya seeder ini hanya untuk mesin pengembangan.
+ *
+ * Bila penyalinan gagal (disk penuh, berkas sumber hilang), buku contoh
+ * dibuat dengan jalur palsu dan tidak dapat dibaca — sengaja demikian.
+ * Menumpang berkas asli akan mengembalikan risiko penghapusan salah
+ * sasaran, dan buku contoh yang tak terbaca jauh lebih ringan akibatnya.
  */
 class BukuContohSeeder extends Seeder
 {
@@ -62,14 +69,16 @@ class BukuContohSeeder extends Seeder
         $prodi = Prodi::all()->keyBy('name');
         $dosenProdi = User::where('role', User::ROLE_ADMIN)->get()->keyBy('prodi_id');
 
-        if ($sumber) {
-            $this->command->info("Buku contoh akan menumpang berkas: {$sumber->file_path}");
+                if ($sumber) {
+            $this->command->info("Berkas contoh akan disalin dari: {$sumber->file_path}");
+            $this->command->warn('Setiap buku contoh menyalin PDF-nya sendiri, jadi siapkan ruang disk sekitar 18 kali ukuran berkas di atas.');
         } else {
             $this->command->warn('Tidak ada buku berisi berkas. Buku contoh dibuat dengan jalur palsu dan TIDAK dapat dibaca.');
         }
 
         $dibuat = 0;
         $dilewati = 0;
+        $gagalSalin = 0;
 
         foreach ($this->daftarBuku() as $data) {
             $slug = self::AWALAN_SLUG.Str::slug($data['judul']);
@@ -97,6 +106,34 @@ class BukuContohSeeder extends Seeder
 
             $halaman = $sumber?->page_count ?? $data['halaman'];
 
+            // Berkas disalin, tidak dipakai bersama: buku contoh harus dapat
+            // dihapus permanen tanpa menyentuh PDF milik buku sungguhan.
+            $jalurBerkas = null;
+
+            if ($sumber?->file_path) {
+                $jalurBerkas = $this->salin(
+                    'local',
+                    (string) $sumber->file_path,
+                    'books/'.self::AWALAN_SLUG.Str::uuid().'.pdf',
+                );
+
+                if ($jalurBerkas === null) {
+                    $gagalSalin++;
+                }
+            }
+
+            $jalurSampul = null;
+
+            if ($data['bersampul'] && $sumber?->cover_path) {
+                $akhiran = pathinfo((string) $sumber->cover_path, PATHINFO_EXTENSION) ?: 'jpg';
+
+                $jalurSampul = $this->salin(
+                    'public',
+                    (string) $sumber->cover_path,
+                    'covers/'.self::AWALAN_SLUG.Str::uuid().'.'.$akhiran,
+                );
+            }
+
             $buku = Book::create([
                 'title' => $data['judul'],
                 'slug' => $slug,
@@ -105,17 +142,23 @@ class BukuContohSeeder extends Seeder
                 'prodi_id' => $prodiId,
                 'category_id' => $kategoriTerpilih?->id,
                 'uploaded_by' => ($dosenProdi[$prodiId] ?? $pengunggahCadangan)->id,
-                'file_path' => $sumber?->file_path ?? 'books/contoh-'.Str::uuid().'.pdf',
-                'file_size' => $sumber
-                    ? (Storage::disk('local')->exists($sumber->file_path)
-                        ? Storage::disk('local')->size($sumber->file_path)
-                        : (int) $sumber->file_size)
+
+                // Penyalinan yang gagal berujung pada jalur palsu, BUKAN pada
+                // jalur berkas asli. Buku contoh yang tak terbaca jauh lebih
+                // ringan akibatnya daripada penghapusan yang salah sasaran.
+                'file_path' => $jalurBerkas ?? 'books/'.self::AWALAN_SLUG.Str::uuid().'.pdf',
+                'file_size' => $jalurBerkas !== null
+                    ? Storage::disk('local')->size($jalurBerkas)
                     : random_int(400_000, 20_000_000),
                 'page_count' => $halaman,
 
                 // Separuh buku sengaja dibiarkan tanpa sampul, supaya kotak
                 // inisial ikut teruji. Rak sungguhan pun tidak pernah rapi.
-                'cover_path' => $data['bersampul'] ? $sumber?->cover_path : null,
+                'cover_path' => $jalurSampul,
+
+                // Separuh buku sengaja dibiarkan tanpa sampul, supaya kotak
+                // inisial ikut teruji. Rak sungguhan pun tidak pernah rapi.
+                'cover_path' => $jalurSampul,
 
                 'access_mode' => $data['akses'],
                 'download_page_start' => $data['akses'] === Book::AKSES_SEBAGIAN ? 1 : null,
@@ -135,9 +178,13 @@ class BukuContohSeeder extends Seeder
             $dibuat++;
         }
 
-        $this->isiKoleksiContoh();
+               $this->isiKoleksiContoh();
 
         $this->command->info("Buku contoh dibuat: {$dibuat} · dilewati (sudah ada): {$dilewati}");
+
+        if ($gagalSalin > 0) {
+            $this->command->warn("{$gagalSalin} berkas gagal disalin; buku contoh terkait tidak dapat dibuka di pembaca.");
+        }
     }
 
     /**
@@ -161,7 +208,30 @@ class BukuContohSeeder extends Seeder
             }
         }
 
-        $this->command->info("Koleksi contoh diisi untuk {$mahasiswa->count()} mahasiswa.");
+                $this->command->info("Koleksi contoh diisi untuk {$mahasiswa->count()} mahasiswa.");
+    }
+
+    /**
+     * Menyalin satu berkas di dalam sebuah disk.
+     *
+     * Mengembalikan jalur tujuan bila berhasil, atau null bila gagal —
+     * termasuk saat berkas sumbernya tidak ada. Pemanggil yang memutuskan
+     * apa artinya kegagalan itu; di sini tidak ada yang dilempar, sebab
+     * satu berkas yang gagal disalin tidak boleh menghentikan seeder.
+     */
+    private function salin(string $namaDisk, string $sumber, string $tujuan): ?string
+    {
+        try {
+            $disk = Storage::disk($namaDisk);
+
+            if (! $disk->exists($sumber)) {
+                return null;
+            }
+
+            return $disk->copy($sumber, $tujuan) ? $tujuan : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -174,7 +244,7 @@ class BukuContohSeeder extends Seeder
     {
         return [
             ['judul' => 'Dasar-Dasar Mekanika Teknik', 'penulis' => 'Ir. Bambang Sutrisno', 'prodi' => 'Teknik', 'akses' => Book::AKSES_PENUH, 'terbit' => true, 'watermark' => false, 'bersampul' => true, 'halaman' => 214, 'umurHari' => 2, 'ringkasan' => 'Pengantar statika dan dinamika untuk mahasiswa semester awal.'],
-            ['judul' => 'Menggambar Teknik dengan AutoCAD', 'penulis' => 'Rina Kusumawati', 'prodi' => 'Teknik', 'akses' => Book::AKSES_SEBAGIAN, 'terbit' => true, 'watermark' => true, 'bersampul' => false, 'halaman' => 168, 'umverHari' => 5, 'umurHari' => 5, 'ringkasan' => 'Panduan praktis penyusunan gambar kerja beserta standar penulisannya.'],
+            ['judul' => 'Menggambar Teknik dengan AutoCAD', 'penulis' => 'Rina Kusumawati', 'prodi' => 'Teknik', 'akses' => Book::AKSES_SEBAGIAN, 'terbit' => true, 'watermark' => true, 'bersampul' => false, 'halaman' => 168, 'umurHari' => 5, 'ringkasan' => 'Panduan praktis penyusunan gambar kerja beserta standar penulisannya.'],
             ['judul' => 'Material Konstruksi Ramah Lingkungan', 'penulis' => 'Dr. Agus Priyono', 'prodi' => 'Teknik', 'akses' => Book::AKSES_BACA_SAJA, 'terbit' => true, 'watermark' => true, 'bersampul' => true, 'halaman' => 132, 'umurHari' => 9, 'ringkasan' => 'Kajian bahan bangunan berkelanjutan dan penerapannya di Indonesia.'],
             ['judul' => 'Praktikum Fisika Dasar', 'penulis' => 'Tim Laboratorium Teknik', 'prodi' => 'Teknik', 'akses' => Book::AKSES_PENUH, 'terbit' => true, 'watermark' => false, 'bersampul' => false, 'halaman' => 96, 'umurHari' => 16, 'ringkasan' => 'Dua belas modul praktikum beserta lembar pengamatannya.'],
             ['judul' => 'Perancangan Sistem Drainase Perkotaan', 'penulis' => 'Ir. Nurul Hidayah', 'prodi' => 'Teknik', 'akses' => Book::AKSES_SEBAGIAN, 'terbit' => true, 'watermark' => false, 'bersampul' => true, 'halaman' => 240, 'umurHari' => 28, 'ringkasan' => 'Metode perhitungan debit dan tata letak saluran di kawasan padat.'],
@@ -196,14 +266,21 @@ class BukuContohSeeder extends Seeder
             ['judul' => 'Literasi Digital dan Keamanan Data', 'penulis' => 'Pusat Teknologi Informasi', 'prodi' => null, 'akses' => Book::AKSES_PENUH, 'terbit' => true, 'watermark' => false, 'bersampul' => false, 'halaman' => 112, 'umurHari' => 52, 'ringkasan' => 'Kata sandi, pengelabuan, dan penjagaan data pribadi.'],
         ];
 
-        /*
-         * Cara membuang seluruh buku contoh dengan aman — lewat tinker:
+               /*
+         * Membuang buku contoh sekarang boleh lewat jalan biasa: pilih
+         * semuanya di Tempat Sampah, atau tunggu `ebook:bersihkan-buku`
+         * melenyapkannya setelah masa tenggang. Karena setiap buku contoh
+         * memiliki salinan berkasnya sendiri, tidak ada PDF buku asli yang
+         * ikut terhapus.
+         *
+         * Bila ingin cepat lewat tinker:
          *
          *   DB::table('books')->where('slug', 'like', 'contoh-%')->delete();
          *
-         * Sengaja memakai DB, bukan model: dengan begitu tidak ada logika
-         * penghapusan berkas yang tersentuh, sehingga PDF milik buku asli
-         * tetap utuh. Baris di book_saves ikut terbawa oleh cascade.
+         * Cara ini melewati logika penghapusan berkas, jadi salinan PDF dan
+         * sampulnya tertinggal sebagai berkas yatim. Itu tidak menghapus
+         * apa pun milik buku asli, dan `ebook:bersihkan-buku` akan menyapu
+         * berkas yatim tersebut pada jadwal berikutnya.
          */
     }
 }

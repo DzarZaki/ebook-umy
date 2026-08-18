@@ -8,6 +8,7 @@ use App\Models\Book;
 use App\Models\DownloadLog;
 use App\Models\User;
 use App\Services\BerkasBukuService;
+use App\Support\Pdf\Qpdf;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -21,13 +22,15 @@ use Throwable;
  *
  * Satu-satunya pintu yang menyerahkan berkas ke tangan pengguna. Karena
  * itu seluruh penegakan aturan berkumpul di sini: wewenang diperiksa,
- * halaman dipotong sesuai mode buku, stempel identitas ditempelkan,
- * unduhan dicatat, lalu berkas sementara dibersihkan.
+ * kesiapan peralatan dipastikan, halaman dipotong sesuai mode buku,
+ * stempel identitas ditempelkan, unduhan dicatat, lalu berkas sementara
+ * dibersihkan.
  */
 class UnduhController extends Controller
 {
     public function __construct(
         private readonly BerkasBukuService $berkasBuku,
+        private readonly Qpdf $qpdf,
     ) {
     }
 
@@ -51,6 +54,9 @@ class UnduhController extends Controller
 
         $pengguna = $permintaan->user();
         abort_unless($pengguna instanceof User, 403);
+
+        // Tahap ketiga: sanggupkah server ini menyalurkannya dengan benar?
+        $this->pastikanPengolahBerkasSiap($buku, $pengguna);
 
         try {
             $berkas = $this->berkasBuku->siapkanUnduhan($buku, $pengguna);
@@ -85,6 +91,71 @@ class UnduhController extends Controller
             // setelah terkirim berarti melenyapkan buku itu dari sistem.
             // Karena itu nilainya diambil dari service, tidak ditulis tetap.
             ->deleteFileAfterSend($berkas['sementara']);
+    }
+
+    /**
+     * Menahan unduhan yang tidak dapat disalurkan sebagaimana mestinya.
+     *
+     * Dulu ketiadaan qpdf hanya menghasilkan satu baris Log::warning di dalam
+     * service, lalu berkas asli diteruskan TANPA stempel dengan status 200.
+     * Akibatnya buruk justru karena tidak kelihatan: dosen tetap yakin
+     * bukunya bertanda identitas, mahasiswa menerima PDF bersih, dan tidak
+     * seorang pun tahu sampai berkasnya beredar di luar dan tidak ada jejak
+     * yang bisa dilacak. Sekarang kejadian itu berhenti di sini, tercatat
+     * sebagai Log::error yang menyebut sebabnya.
+     *
+     * Diletakkan setelah pemeriksaan wewenang, dan itu disengaja: orang yang
+     * memang tidak berhak mengunduh tidak perlu diberi tahu keadaan internal
+     * server. Diletakkan sebelum pencatatan unduhan, juga disengaja: statistik
+     * tidak boleh memuat unduhan yang sebenarnya tidak pernah terjadi.
+     */
+    private function pastikanPengolahBerkasSiap(Book $buku, User $pengguna): void
+    {
+        $perluPotong = $buku->access_mode === Book::AKSES_SEBAGIAN;
+        $perluStempel = (bool) $buku->watermark_enabled;
+
+        // Buku utuh tanpa stempel disalurkan apa adanya; qpdf tidak dilibatkan
+        // sama sekali, jadi ketiadaannya tidak boleh menghalangi apa pun.
+        if (! $perluPotong && ! $perluStempel) {
+            return;
+        }
+
+        if ($this->qpdf->tersedia()) {
+            return;
+        }
+
+        $wajib = (bool) config('ebook.qpdf.wajib', true);
+
+        Log::error('qpdf tidak tersedia saat buku diminta untuk diunduh.', [
+            'buku_id' => $buku->id,
+            'pengguna_id' => $pengguna->id,
+            'perlu_potong' => $perluPotong,
+            'perlu_stempel' => $perluStempel,
+            'binary' => $this->qpdf->binary(),
+            'sebab' => $this->qpdf->alasanTidakTersedia(),
+            'ditahan' => $wajib || $perluPotong,
+            'petunjuk' => 'Jalankan: php artisan ebook:periksa-qpdf',
+        ]);
+
+        // Pemotongan halaman tidak bisa ditawar, apa pun setelan kelonggaran:
+        // meneruskannya berarti menyerahkan seluruh buku, bukan bagian yang
+        // diizinkan dosen. Penolakan ini juga ditegakkan lagi di dalam
+        // service — dua lapis, karena kebocorannya tidak bisa dibatalkan.
+        if ($perluPotong) {
+            abort(503, 'Layanan pengolahan berkas sedang tidak tersedia, sehingga unduhan '
+                .'sebagian tidak dapat disiapkan. Silakan coba beberapa saat lagi.');
+        }
+
+        // Mode kelonggaran: pengelola sadar-sadar memilih layanan tetap jalan
+        // tanpa stempel sambil qpdf dibereskan. Kejadiannya sudah tercatat
+        // sebagai galat di atas, jadi tidak lagi lewat tanpa jejak.
+        if (! $wajib) {
+            return;
+        }
+
+        abort(503, 'Buku ini belum dapat diunduh karena layanan penanda berkas sedang '
+            .'tidak tersedia. Pengelola sistem sudah dicatatkan pemberitahuannya — '
+            .'silakan coba beberapa saat lagi.');
     }
 
     /**

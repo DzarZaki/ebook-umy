@@ -17,7 +17,10 @@ class UpdateKodeAksesRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'access_code' => strtoupper(trim((string) $this->input('access_code'))),
+                        // Satu sumber kebenaran dengan mutator di App\Models\Prodi, agar
+            // nilai yang divalidasi Rule::unique persis sama dengan yang
+            // nanti tersimpan.
+            'access_code' => \App\Models\Prodi::seragamkanKode($this->input('access_code')),
         ]);
     }
 

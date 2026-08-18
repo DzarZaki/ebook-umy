@@ -106,6 +106,20 @@ class User extends Authenticatable
         return $this->hasMany(Bookmark::class);
     }
 
+        /**
+     * Relasi: buku yang diunggah pengguna ini.
+     *
+     * Dipakai untuk menjaga agar akun dosen tidak dihapus selama masih
+     * tercatat sebagai pengunggah. Sejak books.uploaded_by memakai
+     * nullOnDelete, penghapusan akun tidak lagi melenyapkan bukunya —
+     * tetapi jejak kepemilikannya hilang, dan buku umum (tanpa prodi)
+     * menjadi yatim yang tak dapat dikelola dosen mana pun.
+     */
+    public function bukuDiunggah(): HasMany
+    {
+        return $this->hasMany(Book::class, 'uploaded_by');
+    }
+
     /**
      * Apakah buku ini sudah ada di koleksi pengguna?
      *

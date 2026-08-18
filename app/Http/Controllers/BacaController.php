@@ -12,6 +12,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use RuntimeException;
@@ -54,33 +55,47 @@ class BacaController extends Controller
         ]);
     }
 
-    /**
+        /**
      * Menyalurkan berkas PDF untuk dibaca di penampil.
      *
      * Berkas dialirkan langsung dari penyimpanan privat dan tidak pernah
      * memiliki alamat publik, sehingga hanya pengguna yang sedang masuk
      * dan berhak yang dapat memuatnya.
      *
-     * Perlu ditegaskan: yang keluar dari sini adalah dokumen asli tanpa
-     * potongan halaman. Itu memang wajar untuk membaca — penampil hanya
-     * menampilkan, tidak menyerahkan berkas. Penyerahan berkas ke tangan
-     * pengguna ditangani UnduhController, yang menegakkan pemotongan
-     * halaman dan stempel identitas.
+     * Yang keluar dari sini BUKAN lagi selalu dokumen asli. Untuk buku yang
+     * tidak bermode "unduh penuh", service menyalurkan salinan berstempel
+     * identitas pembaca — dan, bila ebook.baca.ikuti_rentang dinyalakan,
+     * salinan yang sudah dipotong sesuai rentang halaman.
+     *
+     * Alasannya sederhana: berkas yang sampai ke browser selalu dapat
+     * disimpan pengguna. Selama endpoint ini menyerahkan dokumen asli utuh,
+     * mode "baca saja" dan "unduh sebagian" hanya menjadi hiasan pada
+     * antarmuka, bukan aturan yang benar-benar berlaku.
      */
     public function berkas(Request $permintaan, Book $buku): StreamedResponse
     {
         $this->pastikanBolehMembaca($buku);
 
         try {
-            $relatif = $this->berkasBuku->jalurBacaan($buku, $permintaan->user());
-        } catch (AuthorizationException|RuntimeException) {
+            $sumber = $this->berkasBuku->siapkanBacaan($buku, $permintaan->user());
+        } catch (AuthorizationException) {
             abort(404);
+        } catch (RuntimeException $galat) {
+            Log::error('Berkas bacaan gagal disiapkan.', [
+                'buku_id' => $buku->id,
+                'pengguna_id' => $permintaan->user()?->id,
+                'pesan' => $galat->getMessage(),
+            ]);
+
+            // 503, bukan 500: gangguan sementara pada pengolahan berkas.
+            abort(503, $galat->getMessage());
         }
 
-        return Storage::disk('local')->response($relatif, $buku->slug.'.pdf', [
+        return Storage::disk($sumber['disk'])->response($sumber['jalur'], $buku->slug.'.pdf', [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$buku->slug.'.pdf"',
             'X-Content-Type-Options' => 'nosniff',
+            'X-Robots-Tag' => 'noindex, nofollow, noarchive',
             'Referrer-Policy' => 'no-referrer',
             'Cache-Control' => 'private, max-age=0, no-store',
         ]);

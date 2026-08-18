@@ -22,11 +22,31 @@ return [
     | setiap halaman. Berbeda dengan pustaka PHP murni, qpdf sanggup
     | membaca PDF versi 1.5 ke atas yang memakai object stream.
     */
-    'qpdf' => [
+        'qpdf' => [
         'binary' => env('QPDF_BINARY', 'qpdf'),
 
         // Batas waktu setiap pemanggilan qpdf, dalam detik.
         'timeout' => (int) env('QPDF_TIMEOUT', 60),
+
+        /*
+         | Haruskah ketiadaan qpdf menghentikan unduhan?
+         |
+         | true (bawaan) — unduhan yang membutuhkan qpdf ditolak dengan 503.
+         |   Ini pilihan yang benar untuk keadaan normal. Menyalurkan buku
+         |   tanpa stempel identitas berarti dosen mengira bukunya bertanda
+         |   padahal tidak; kepercayaan yang salah lebih merugikan daripada
+         |   unduhan yang jelas-jelas gagal dan karenanya segera dilaporkan.
+         |
+         | false — unduhan diteruskan tanpa stempel, kejadiannya dicatat
+         |   sebagai Log::error. Hanya untuk masa darurat: qpdf baru rusak
+         |   di server dan Anda memilih layanan tetap jalan sambil dibereskan.
+         |   Mode ini tidak melonggarkan pemotongan halaman — buku "unduh
+         |   sebagian" tetap ditolak, karena meneruskannya berarti menyerahkan
+         |   seluruh isi buku yang seharusnya tertutup.
+         |
+         | Periksa keadaan sebenarnya dengan: php artisan ebook:periksa-qpdf
+         */
+        'wajib' => (bool) env('EBOOK_QPDF_WAJIB', true),
     ],
 
     /*
@@ -48,14 +68,51 @@ return [
         'maks_per_jam' => (int) env('EBOOK_DOWNLOAD_PER_HOUR', 20),
     ],
 
-    /*
+       /*
     |----------------------------------------------------------------------
     | Streaming baca
     |----------------------------------------------------------------------
-    | Batas permintaan berkas untuk dibaca di penampil, per menit.
+    | Berbeda dengan unduhan, aliran baca tidak boleh gagal hanya karena
+    | pengolahan berkas bermasalah — mahasiswa berhak membaca. Karena itu
+    | stempel di sini bersifat gagal-terbuka: bila qpdf tidak tersedia,
+    | berkas asli tetap disalurkan dan kejadiannya dicatat di log.
+    |
+    | Pengecualiannya rentang halaman: bila penegakannya dinyalakan tetapi
+    | gagal dijalankan, permintaan DITOLAK. Menyalurkan berkas utuh dalam
+    | keadaan itu sama dengan membatalkan aturan dosen tanpa sepengetahuannya.
     */
     'baca' => [
+        // Batas permintaan berkas untuk dibaca di penampil, per menit.
         'maks_per_menit' => (int) env('EBOOK_READ_PER_MINUTE', 30),
+
+        /*
+         * Stempel identitas pada aliran baca untuk buku yang BUKAN
+         * "unduh penuh". Berbeda dari kolom watermark_enabled milik buku,
+         * yang mengatur stempel pada berkas UNDUHAN.
+         *
+         * Buku "unduh penuh" tidak distempel di jalur baca: pembacanya
+         * memang boleh mengambil seluruh berkas lewat pintu unduh.
+         */
+        'stempel' => (bool) env('EBOOK_BACA_STEMPEL', true),
+
+        /*
+         * Haruskah penampil ikut dibatasi pada rentang halaman unduhan?
+         *
+         * Default mati, karena "unduh sebagian" pada umumnya berarti
+         * "baca semuanya di sini, ambil sebagiannya saja". Nyalakan bila
+         * di kampus Anda rentang itu dimaksudkan membatasi bacaan juga.
+         */
+        'ikuti_rentang' => (bool) env('EBOOK_BACA_IKUTI_RENTANG', false),
+
+        // Folder cache hasil stempel bacaan, pada disk ebook.unduh.disk.
+        'folder' => 'bacaan-sementara',
+
+        /*
+         * Umur cache bacaan (menit). Lebih panjang daripada TTL unduhan
+         * karena berkas ini dipakai berulang selama satu sesi membaca:
+         * pdf.js meminta berkas yang sama setiap kali penampil dibuka.
+         */
+        'ttl_menit' => (int) env('EBOOK_BACA_TTL', 120),
     ],
 
     /*

@@ -13,7 +13,7 @@
     <div class="py-10">
         <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
 
-            <div class="grid gap-8 rounded-lg border border-sepia-700 bg-sepia-800/50 p-6 sm:p-8 lg:grid-cols-12">
+            <div class="grid gap-8 rounded-lg border border-sepia-700 p-6 sm:p-8 lg:grid-cols-12 glass-card hover-lift">
 
                 {{-- Sampul --}}
                 {{-- Sengaja TANPA aspect-[3/4] dan tanpa pemotongan: di halaman
@@ -34,19 +34,19 @@
                 <div class="lg:col-span-8">
                     <div class="flex flex-wrap gap-2">
                         @if ($buku->isUmum())
-                            <span class="rounded border border-sepia-600 bg-sepia-800 px-2 py-1 text-xs font-medium text-kabut-300">Umum</span>
+                            <span class="rounded border border-sepia-600 bg-sepia-800 px-2 py-1 text-xs font-medium text-kabut-300 badge-category">Umum</span>
                         @else
                             {{-- prodi?->name : buku yang prodi_id-nya kosong tetapi
                                  tidak tertandai umum tidak boleh mematikan halaman. --}}
-                            <span class="rounded border border-jingga-700/50 bg-jingga-900/30 px-2 py-1 text-xs font-medium text-jingga-300">{{ $buku->prodi?->name ?? 'Umum' }}</span>
+                            <span class="rounded border border-jingga-700/50 bg-jingga-900/30 px-2 py-1 text-xs font-medium text-jingga-300 badge-category">{{ $buku->prodi?->name ?? 'Umum' }}</span>
                         @endif
 
                         @if ($buku->category)
-                            <span class="rounded border border-sepia-600 bg-sepia-800 px-2 py-1 text-xs font-medium text-kabut-400">{{ $buku->category->name }}</span>
+                            <span class="rounded border border-sepia-600 bg-sepia-800 px-2 py-1 text-xs font-medium text-kabut-400 badge-category">{{ $buku->category->name }}</span>
                         @endif
 
                         @unless ($buku->is_published)
-                            <span class="rounded border border-red-700/50 bg-red-900/30 px-2 py-1 text-xs font-medium text-red-300">Draf</span>
+                            <span class="rounded border border-red-700/50 bg-red-900/30 px-2 py-1 text-xs font-medium text-red-300 badge-category">Draf</span>
                         @endunless
                     </div>
 
@@ -80,7 +80,7 @@
 
                     <div class="mt-6 flex flex-wrap items-center gap-3">
                         <a href="{{ route('katalog.baca', $buku) }}"
-                           class="cursor-pointer rounded bg-jingga-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-jingga-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
+                           class="cursor-pointer rounded bg-jingga-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-jingga-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 hover-glow btn-press">
                             Baca Buku
                         </a>
 
@@ -105,9 +105,9 @@
             @if ($serupa->isNotEmpty())
                 <h2 class="mt-10 font-display text-lg font-semibold text-kabut-50">Bacaan lain yang mungkin cocok</h2>
 
-                <ul class="mt-3 divide-y divide-sepia-700 overflow-hidden rounded-lg border border-sepia-700 bg-sepia-800/30">
+                <ul class="mt-3 divide-y divide-sepia-700 overflow-hidden rounded-lg border border-sepia-700 glass-card">
                     @foreach ($serupa as $lain)
-                        <li class="flex items-center justify-between gap-4 px-5 py-4 transition-colors duration-200 hover:bg-sepia-800/40 motion-reduce:transition-none">
+                        <li class="flex items-center justify-between gap-4 px-5 py-4 list-item-modern">
                             <div class="min-w-0">
                                 <a href="{{ route('katalog.show', $lain) }}"
                                    class="cursor-pointer font-display text-sm font-semibold text-kabut-50 transition-colors duration-150 hover:text-jingga-400 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">

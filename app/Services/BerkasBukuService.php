@@ -22,15 +22,21 @@ use Throwable;
  *
  * Dua jalur yang dibedakan tegas:
  *
- * 1. BACA  — selalu menyalurkan dokumen asli sebagai aliran, tanpa pernah
- *            menaruhnya di lokasi yang bisa dialamati publik.
+ * 1. BACA  — menyalurkan berkas sebagai aliran privat, tanpa pernah punya
+ *            alamat publik. Untuk buku yang BUKAN "unduh penuh", berkasnya
+ *            distempel identitas pembaca lebih dulu, dan bila diminta, ikut
+ *            dipotong sesuai rentang halaman.
  * 2. UNDUH — menghasilkan berkas turunan sesuai hak pengguna: dipotong bila
  *            mode buku "sebagian", dan diberi stempel identitas bila diminta.
  *
- * Prinsip gagal-tertutup: bila sebuah aturan tidak dapat ditegakkan
- * (misalnya qpdf tidak tersedia padahal buku harus dipotong), permintaan
- * DITOLAK. Menyalurkan berkas utuh dalam keadaan itu sama dengan
- * membocorkan seluruh buku.
+ * Prinsip kegagalan di kedua jalur sengaja berbeda, dan perbedaannya penting:
+ *
+ * - Pemotongan halaman tidak dapat ditawar. Bila ia gagal ditegakkan,
+ *   permintaan DITOLAK — menyalurkan berkas utuh dalam keadaan itu sama
+ *   dengan membocorkan seluruh buku.
+ * - Stempel pada jalur BACA bersifat gagal-terbuka. Halaman yang dibaca
+ *   memang berhak dibaca, jadi kegagalan menstempel dicatat di log, bukan
+ *   dijadikan alasan menolak mahasiswa membaca.
  */
 class BerkasBukuService
 {
@@ -41,11 +47,74 @@ class BerkasBukuService
     }
 
     /**
+     * Menyiapkan berkas buku untuk dibaca di penampil.
+     *
+     * Mengembalikan nama disk beserta jalur RELATIF, bukan jalur absolut,
+     * supaya pemanggil memakai Storage::response() dan berkasnya tetap
+     * disalurkan sebagai aliran privat.
+     *
+     * @return array{disk: string, jalur: string}
+     *
+     * @throws AuthorizationException bila pengguna tidak berhak membaca
+     * @throws RuntimeException       bila rentang halaman wajib ditegakkan tetapi gagal
+     */
+    public function siapkanBacaan(Book $buku, User $pembaca): array
+    {
+        if (! $buku->bolehDilihatOleh($pembaca)) {
+            throw new AuthorizationException('Anda tidak berhak membuka buku ini.');
+        }
+
+        $relatif = $this->pastikanBerkasBukuAda($buku);
+        $bawaan = ['disk' => 'local', 'jalur' => $relatif];
+
+        // Buku "unduh penuh" tidak perlu diolah untuk dibaca: pembacanya
+        // toh boleh mengambil seluruh berkas lewat pintu unduh. Mengolahnya
+        // hanya memboroskan waktu dan ruang tanpa menambah satu pun jaminan.
+        if ($buku->access_mode === Book::AKSES_PENUH) {
+            return $bawaan;
+        }
+
+        // Dihitung di luar try: bila pengaturan rentangnya sendiri yang tidak
+        // sah, itu galat konfigurasi buku, bukan kegagalan pengolahan.
+        $rentang = $this->rentangBacaan($buku);
+
+        if ($rentang === null && ! $this->stempelBacaanAktif()) {
+            return $bawaan;
+        }
+
+        try {
+            $siap = $this->bacaanTerolah($buku, $pembaca, $relatif, $rentang);
+
+            if ($siap !== null) {
+                return ['disk' => $this->namaDiskSementara(), 'jalur' => $siap];
+            }
+        } catch (Throwable $galat) {
+            // Gagal-tertutup: rentang halaman wajib ditegakkan.
+            if ($rentang !== null) {
+                throw new RuntimeException(
+                    'Buku ini belum dapat dibuka karena berkasnya sedang tidak dapat diolah. '
+                    .'Silakan coba beberapa saat lagi.',
+                    0,
+                    $galat,
+                );
+            }
+
+            // Gagal-terbuka: hanya stempelnya yang hilang, bukan batas halaman.
+            Log::warning('Stempel bacaan dilewati karena berkas gagal diolah.', [
+                'buku_id' => $buku->id,
+                'pengguna_id' => $pembaca->id,
+                'pesan' => $galat->getMessage(),
+            ]);
+        }
+
+        return $bawaan;
+    }
+
+    /**
      * Jalur relatif berkas buku untuk disalurkan ke penampil baca.
      *
-     * Sengaja mengembalikan jalur relatif, bukan absolut, supaya pemanggil
-     * memakai Storage::response() dan berkas tetap disalurkan sebagai
-     * aliran privat.
+     * @deprecated Dipertahankan hanya untuk pemanggil lama. Gunakan
+     *             siapkanBacaan(), yang ikut menegakkan stempel dan rentang.
      */
     public function jalurBacaan(Book $buku, User $pembaca): string
     {
@@ -152,40 +221,182 @@ class BerkasBukuService
     /**
      * Menghapus berkas sementara yang sudah melewati umur pakainya.
      *
+     * Dua folder disapu sekaligus: hasil olahan unduhan dan cache bacaan.
+     * Umurnya berbeda karena sifatnya berbeda — berkas unduhan sekali kirim
+     * lalu selesai, sedangkan cache bacaan dipakai berulang selama satu sesi.
+     *
      * @return int Jumlah berkas yang terhapus.
      */
     public function bersihkanBerkasKedaluwarsa(): int
     {
-        $disk = $this->diskSementara();
-        $folder = $this->folderSementara();
-
-        $batas = Carbon::now()->subMinutes(
-            max(1, (int) config('ebook.unduh.ttl_menit', 30))
+        return $this->sapuFolder(
+            $this->folderSementara(),
+            (int) config('ebook.unduh.ttl_menit', 30),
+        ) + $this->sapuFolder(
+            $this->folderBacaan(),
+            (int) config('ebook.baca.ttl_menit', 120),
         );
+    }
 
-        $jumlah = 0;
+    /**
+     * Menyiapkan berkas bacaan yang sudah distempel (dan dipotong bila perlu).
+     *
+     * Hasilnya disimpan sebagai cache, bukan berkas sekali pakai. Alasannya
+     * praktis: pdf.js meminta berkas yang sama setiap kali penampil dibuka,
+     * dan memanggil qpdf pada setiap permintaan akan melumpuhkan server.
+     *
+     * @param  array{int, int}|null  $rentang
+     * @return string|null Jalur relatif pada disk sementara, atau null bila
+     *                     tidak ada yang bisa diolah dan berkas asli boleh dipakai.
+     */
+    private function bacaanTerolah(Book $buku, User $pembaca, string $relatifAsli, ?array $rentang): ?string
+    {
+        $disk = $this->diskSementara();
+        $folder = $this->folderBacaan();
+        $asli = $this->diskBuku()->path($relatifAsli);
+
+        $kunci = $this->kunciBacaan($buku, $pembaca, $asli, $rentang);
+        $tujuan = "{$folder}/{$kunci}.pdf";
+
+        // Masih hangat di cache: tidak perlu memanggil qpdf sama sekali.
+        if ($disk->exists($tujuan)) {
+            return $tujuan;
+        }
+
+        if (! $this->qpdf->tersedia()) {
+            if ($rentang !== null) {
+                throw new RuntimeException(
+                    'Program pengolah berkas tidak tersedia, sehingga batas halaman '
+                    .'pada buku ini tidak dapat ditegakkan.'
+                );
+            }
+
+            Log::warning('Stempel bacaan dilewati karena qpdf tidak tersedia.', [
+                'buku_id' => $buku->id,
+                'pengguna_id' => $pembaca->id,
+            ]);
+
+            return null;
+        }
+
+        $this->bersihkanBerkasKedaluwarsa();
+
+        if (! $disk->exists($folder)) {
+            $disk->makeDirectory($folder);
+        }
+
+        $penanda = Str::uuid()->toString();
+        $antara = [];
+        $kerja = $asli;
 
         try {
-            $daftar = $disk->files($folder);
-        } catch (Throwable) {
-            return 0;
-        }
+            if ($rentang !== null) {
+                [$awal, $akhir] = $rentang;
 
-        foreach ($daftar as $berkas) {
-            try {
-                $diubah = Carbon::createFromTimestamp($disk->lastModified($berkas));
+                $potong = $disk->path("{$folder}/{$kunci}-{$penanda}-potong.pdf");
+                $this->qpdf->potongHalaman($kerja, $awal, $akhir, $potong);
 
-                if ($diubah->lt($batas)) {
-                    $disk->delete($berkas);
-                    $jumlah++;
-                }
-            } catch (Throwable) {
-                // Berkas mungkin sedang dikirim ke pengguna lain. Lewati saja.
-                continue;
+                $antara[] = $potong;
+                $kerja = $potong;
             }
+
+            $stempel = $disk->path("{$folder}/{$kunci}-{$penanda}-stempel.pdf");
+            $this->pembuatStempel->untukPengguna($pembaca, $stempel, null, 'Dibaca oleh');
+            $antara[] = $stempel;
+
+            $hasil = $disk->path("{$folder}/{$kunci}-{$penanda}-hasil.pdf");
+            $this->qpdf->tempelStempel($kerja, $stempel, $hasil);
+            $antara[] = $hasil;
+
+            // Dipindahkan lewat rename, bukan disalin: berkas cache baru
+            // muncul dalam keadaan lengkap, sehingga permintaan lain yang
+            // datang bersamaan tidak pernah menemukan berkas setengah jadi.
+            if (! @rename($hasil, $disk->path($tujuan))) {
+                throw new RuntimeException('Berkas bacaan gagal dipindahkan ke folder simpanan.');
+            }
+
+            $this->hapus(array_filter($antara, static fn (string $jalur): bool => $jalur !== $hasil));
+
+            return $tujuan;
+        } catch (Throwable $galat) {
+            $this->hapus($antara);
+
+            throw $galat;
+        }
+    }
+
+    /**
+     * Rentang halaman yang boleh DIBACA, atau null bila seluruh buku boleh
+     * dibaca apa adanya.
+     *
+     * Bawaannya null walau bukunya bermode "sebagian", karena rentang pada
+     * kolom download_page_* menyatakan batas UNDUH. Kampus yang memaknainya
+     * sebagai batas baca cukup menyalakan ebook.baca.ikuti_rentang.
+     *
+     * @return array{int, int}|null
+     */
+    private function rentangBacaan(Book $buku): ?array
+    {
+        if ($buku->access_mode !== Book::AKSES_SEBAGIAN) {
+            return null;
         }
 
-        return $jumlah;
+        if (! (bool) config('ebook.baca.ikuti_rentang', false)) {
+            return null;
+        }
+
+        $total = (int) ($buku->page_count ?? 0);
+        $awal = max(1, (int) ($buku->download_page_start ?? 1));
+        $akhir = (int) ($buku->download_page_end ?? 0);
+
+        if ($akhir < 1) {
+            $akhir = $total > 0 ? $total : $awal;
+        }
+
+        if ($total > 0) {
+            $awal = min($awal, $total);
+            $akhir = min($akhir, $total);
+        }
+
+        if ($akhir < $awal) {
+            throw new RuntimeException(
+                'Pengaturan rentang halaman pada buku ini tidak sah. '
+                .'Hubungi pengelola buku untuk memperbaikinya.'
+            );
+        }
+
+        // Rentang yang mencakup seluruh buku tidak perlu dipotong.
+        if ($total > 0 && $awal === 1 && $akhir === $total) {
+            return null;
+        }
+
+        return [$awal, $akhir];
+    }
+
+    private function stempelBacaanAktif(): bool
+    {
+        return (bool) config('ebook.baca.stempel', true);
+    }
+
+    /**
+     * Kunci cache bacaan.
+     *
+     * Ikut memasukkan waktu ubah berkas induk dan tanggal hari ini: yang
+     * pertama supaya buku yang diganti berkasnya tidak menyajikan cache
+     * lama, yang kedua supaya tanggal pada stempel tetap jujur.
+     *
+     * @param  array{int, int}|null  $rentang
+     */
+    private function kunciBacaan(Book $buku, User $pembaca, string $jalurAsli, ?array $rentang): string
+    {
+        return sha1(implode('|', [
+            (string) $buku->getKey(),
+            (string) $buku->file_path,
+            (string) (@filemtime($jalurAsli) ?: 0),
+            (string) $pembaca->getKey(),
+            $rentang === null ? 'utuh' : "{$rentang[0]}-{$rentang[1]}",
+            Carbon::now()->toDateString(),
+        ]));
     }
 
     /**
@@ -279,6 +490,40 @@ class BerkasBukuService
         return $relatif;
     }
 
+    /**
+     * Menyapu satu folder sementara berdasarkan umur berkasnya.
+     *
+     * @return int Jumlah berkas yang terhapus.
+     */
+    private function sapuFolder(string $folder, int $ttlMenit): int
+    {
+        $disk = $this->diskSementara();
+        $batas = Carbon::now()->subMinutes(max(1, $ttlMenit));
+        $jumlah = 0;
+
+        try {
+            $daftar = $disk->files($folder);
+        } catch (Throwable) {
+            return 0;
+        }
+
+        foreach ($daftar as $berkas) {
+            try {
+                $diubah = Carbon::createFromTimestamp($disk->lastModified($berkas));
+
+                if ($diubah->lt($batas)) {
+                    $disk->delete($berkas);
+                    $jumlah++;
+                }
+            } catch (Throwable) {
+                // Berkas mungkin sedang dikirim ke pengguna lain. Lewati saja.
+                continue;
+            }
+        }
+
+        return $jumlah;
+    }
+
     private function jalurSementara(string $penanda, string $tahap): string
     {
         $disk = $this->diskSementara();
@@ -312,13 +557,23 @@ class BerkasBukuService
     private function diskSementara(): FilesystemAdapter
     {
         /** @var FilesystemAdapter $disk */
-        $disk = Storage::disk((string) config('ebook.unduh.disk', 'local'));
+        $disk = Storage::disk($this->namaDiskSementara());
 
         return $disk;
+    }
+
+    private function namaDiskSementara(): string
+    {
+        return (string) config('ebook.unduh.disk', 'local');
     }
 
     private function folderSementara(): string
     {
         return trim((string) config('ebook.unduh.folder', 'unduhan-sementara'), '/');
+    }
+
+    private function folderBacaan(): string
+    {
+        return trim((string) config('ebook.baca.folder', 'bacaan-sementara'), '/');
     }
 }

@@ -4,7 +4,7 @@
 
 @layer base {
     body {
-        @apply bg-sepia-900 text-kabut-100;
+        @apply bg-arang-deepest text-netral-100;
     }
 
     h1, h2, h3, h4 {
@@ -266,7 +266,7 @@
    Ini yang membuat halaman terbaca sebagai indeks, bukan sebagai grid. */
 .angka-tepi {
     color: transparent;
-    -webkit-text-stroke: 1px currentColor;
+    -webkit-text-stroke: 1px #B85C38;
     -webkit-text-fill-color: transparent;
 }
 
@@ -386,22 +386,23 @@
 */
 #daftar-penanda button {
 	cursor: pointer;
-	border: 1px solid #e5e0d6;
+	border: 1px solid #2A2E3A;
 	padding: 0.375rem 0.75rem;
 	font-size: 0.75rem;
 	font-weight: 500;
-	color: #47413a;
+	color: #9B9893;
+	background-color: #1A1D26;
 	transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
 
 #daftar-penanda button:hover {
-	border-color: #e0ab8a;
-	background-color: #fdf6f0;
-	color: #6f3714;
+	border-color: #B85C38;
+	background-color: #2A2E3A;
+	color: #E8E6E3;
 }
 
 #daftar-penanda button:focus-visible {
-	outline: 2px solid #a4551f;
+	outline: 2px solid #B85C38;
 	outline-offset: 2px;
 }
 
@@ -555,9 +556,9 @@
 	background-color: #3f2f21;
 	background-image: linear-gradient(115deg, #5a4430 0%, #3f2f21 45%, #251b12 100%);
 	box-shadow:
-		inset 3px 0 0 rgba(164, 85, 31, 0.55),
+		inset 3px 0 0 rgba(184, 92, 56, 0.55),
 		inset 0 0 0 1px rgba(227, 213, 194, 0.12),
-		0 22px 40px -18px rgba(37, 27, 18, 0.7);
+		0 22px 40px -18px rgba(11, 14, 20, 0.7);
 	transform-origin: left center;
 	transform: translateZ(16px) rotateY(0deg);
 	transform-style: preserve-3d;
@@ -567,7 +568,7 @@
 }
 
 .buku-muka__sampul:focus-visible {
-	outline: 2px solid #cd8659;
+	outline: 2px solid #B85C38;
 	outline-offset: 4px;
 }
 
@@ -782,9 +783,8 @@ body::before {
 	z-index: -2;
 	pointer-events: none;
 	background:
-		radial-gradient(900px 620px at 82% -12%, rgba(251, 191, 36, 0.07), transparent 68%),
-		radial-gradient(1100px 720px at 4% 108%, rgba(59, 130, 246, 0.04), transparent 70%),
-		linear-gradient(178deg, #0f172a 0%, #0c1220 42%, #090e1a 100%);
+		radial-gradient(900px 620px at 82% -12%, rgba(184, 92, 56, 0.04), transparent 68%),
+		linear-gradient(178deg, #0B0E14 0%, #0F1218 42%, #08090E 100%);
 }
 
 body::after {
@@ -793,7 +793,7 @@ body::after {
 	inset: 0;
 	z-index: -1;
 	pointer-events: none;
-	opacity: 0.32;
+	opacity: 0.28;
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23b)' opacity='0.4'/%3E%3C/svg%3E");
 	background-size: 220px 220px;
 }
@@ -822,17 +822,17 @@ body::after {
 	transform: translateX(-50%);
 	background: linear-gradient(
 		to right,
-		rgba(90, 68, 48, 0) 0%,
-		rgba(90, 68, 48, 0.18) 12%,
-		rgba(90, 68, 48, 0.18) 88%,
-		rgba(90, 68, 48, 0) 100%
+		rgba(42, 46, 58, 0) 0%,
+		rgba(42, 46, 58, 0.5) 12%,
+		rgba(42, 46, 58, 0.5) 88%,
+		rgba(42, 46, 58, 0) 100%
 	);
 }
 
 /* Pita yang sesekali perlu sedikit lebih terang dari dasarnya — dipakai
    hemat, satu atau dua kali per halaman, bukan berselang-seling. */
 .pita--terang {
-	background-color: rgba(250, 247, 242, 0.62);
+	background-color: rgba(26, 29, 38, 0.6);
 }
 
 /* ---------------------------------------------------------------------
@@ -859,9 +859,9 @@ body::after {
 		0 26px 44px -28px rgba(37, 27, 18, 0.55);
 }
 
-/* Garis rambut serba guna, sewarna tinta yang memudar. */
+/* Garis rambut serba guna, border hairline. */
 .garis-tinta {
-	border-color: rgba(90, 68, 48, 0.14);
+	border-color: #2A2E3A;
 }
 
 /* Kertas tidak perlu dicetak di atas kertas. */
@@ -869,5 +869,87 @@ body::after {
 	body::before,
 	body::after {
 		display: none;
+	}
+}
+
+/* =====================================================================
+   MICRO-INTERACTIONS — Hover dan active states yang halus
+   ===================================================================== */
+
+/* Hover lift halus untuk interactive elements */
+.hover-lift {
+	transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+				border-color 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-lift:hover {
+	transform: translateY(-2px);
+}
+
+.hover-lift:active {
+	transform: translateY(1px);
+	transition-duration: 120ms;
+}
+
+/* Button press feedback */
+.btn-press {
+	transition: transform 120ms ease;
+}
+
+.btn-press:active {
+	transform: scale(0.97);
+}
+
+/* Category badge dengan subtle hover */
+.badge-category {
+	transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.badge-category:hover {
+	transform: translateY(-1px);
+	border-color: #B85C38;
+}
+
+/* List item modern dengan subtle accent bar */
+.list-item-modern {
+	position: relative;
+	transition: all 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.list-item-modern::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 3px;
+	background: #B85C38;
+	opacity: 0;
+	transform: scaleY(0);
+	transition: all 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.list-item-modern:hover::before {
+	opacity: 1;
+	transform: scaleY(1);
+}
+
+.list-item-modern:hover {
+	background: rgba(26, 29, 38, 0.4);
+	transform: translateX(4px);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+	.hover-lift,
+	.btn-press,
+	.badge-category,
+	.list-item-modern,
+	.list-item-modern::before {
+		transition: none !important;
+	}
+
+	.hover-lift:hover {
+		transform: none;
 	}
 }

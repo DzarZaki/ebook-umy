@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * Model Prodi — merepresentasikan satu program studi.
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property string $name
  * @property string $slug
+ * @property string|null $access_code
  * @property bool $download_enabled
  */
 class Prodi extends Model
@@ -48,6 +51,39 @@ class Prodi extends Model
     }
 
     /**
+     * Kode akses selalu disimpan dalam huruf besar tanpa spasi tepi, dan
+     * string kosong disimpan sebagai NULL.
+     *
+     * Penyeragaman diletakkan di model, bukan di FormRequest, karena kolom
+     * ini bersifat unik secara peka huruf di basis data sementara
+     * pencariannya tidak peka huruf. Bila `PAI-2026` dan `pai-2026` sampai
+     * hidup berdampingan, satu kode akses akan cocok dengan dua prodi dan
+     * mahasiswa terdaftar ke prodi yang ditentukan urutan baris — akses ke
+     * koleksi prodi lain, tanpa satu pun galat yang terlihat.
+     *
+     * Dengan mutator ini, seeder, tinker, impor data, dan formulir apa pun
+     * yang kelak menulis kolom ini ikut terjaga tanpa perlu mengingatnya.
+     */
+    protected function accessCode(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $nilai): ?string => self::seragamkanKode($nilai),
+        );
+    }
+
+    /**
+     * Bentuk baku sebuah kode akses. Dipakai bersama oleh mutator di atas,
+     * pencarian di bawah, dan validasi di UpdateKodeAksesRequest, supaya
+     * ketiganya tidak mungkin berbeda pendapat.
+     */
+    public static function seragamkanKode(?string $kode): ?string
+    {
+        $kode = trim((string) $kode);
+
+        return $kode === '' ? null : Str::upper($kode);
+    }
+
+    /**
      * Relasi: satu prodi memiliki banyak user (dosen & mahasiswa).
      */
     public function users(): HasMany
@@ -75,17 +111,22 @@ class Prodi extends Model
         return $this->hasMany(Category::class);
     }
 
-    /** Mencari prodi berdasarkan kode akses, tanpa peduli huruf besar-kecil. */
+    /**
+     * Mencari prodi berdasarkan kode akses. Masukan pengguna diseragamkan
+     * lebih dulu, jadi huruf kecil dan spasi tepi tetap diterima — tanpa
+     * membungkus kolomnya dalam UPPER(), yang membuat indeks unik pada
+     * `access_code` tidak terpakai.
+     */
     public static function cariDenganKode(?string $kode): ?self
     {
-        $kode = trim((string) $kode);
+        $kode = self::seragamkanKode($kode);
 
-        if ($kode === '') {
+        if ($kode === null) {
             return null;
         }
 
         return static::query()
-            ->whereRaw('UPPER(access_code) = ?', [strtoupper($kode)])
+            ->where('access_code', $kode)
             ->first();
     }
 }

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Modern CSS Upgrade</title>
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|playfair-display:400,600,700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Copy dari app.css untuk demo */
+        @keyframes badge-shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        @keyframes badge-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.05); }
+        }
+
+        @keyframes badge-glow {
+            0%, 100% {
+                box-shadow: 0 0 8px rgba(249, 115, 22, 0.5), 0 0 16px rgba(249, 115, 22, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 12px rgba(249, 115, 22, 0.7), 0 0 24px rgba(249, 115, 22, 0.4), 0 0 32px rgba(249, 115, 22, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            }
+        }
+
+        @keyframes dot-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .badge-new {
+            position: relative;
+            background: linear-gradient(90deg, rgba(249, 115, 22, 0.9) 0%, rgba(251, 191, 36, 1) 50%, rgba(249, 115, 22, 0.9) 100%);
+            background-size: 200% 100%;
+            animation: badge-shimmer 3s ease-in-out infinite, badge-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite, badge-glow 2.5s ease-in-out infinite;
+            border: 1px solid rgba(251, 191, 36, 0.5);
+            color: #0f172a;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge-new::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 6px;
+            background: #f97316;
+            border-radius: 50%;
+            animation: dot-blink 1.5s ease-in-out infinite;
+            box-shadow: 0 0 8px rgba(249, 115, 22, 0.8);
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .hover-lift {
+            transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 280ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(37, 27, 18, 0.4), 0 4px 12px -2px rgba(37, 27, 18, 0.2);
+        }
+
+        .hover-glow {
+            position: relative;
+            transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .hover-glow::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.4), rgba(251, 191, 36, 0.4));
+            opacity: 0;
+            z-index: -1;
+            filter: blur(8px);
+            transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .hover-glow:hover::before {
+            opacity: 1;
+        }
+
+        .card-tilt {
+            transform-style: preserve-3d;
+            transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: transform;
+        }
+
+        .card-tilt:hover {
+            transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateZ(8px);
+        }
+
+        .card-tilt-shine {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 30%, transparent 60%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: inherit;
+        }
+
+        .card-tilt:hover .card-tilt-shine {
+            opacity: 1;
+        }
+
+        body {
+            background: linear-gradient(178deg, #0f172a 0%, #0c1220 42%, #090e1a 100%);
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8 text-gray-100">
+    <div class="mx-auto max-w-6xl">
+        <h1 class="mb-8 text-4xl font-bold text-center text-amber-400">Demo Modern CSS Upgrade</h1>
+
+        <div class="grid gap-8 md:grid-cols-2">
+            <!-- 1. GLASSMORPHISM -->
+            <div>
+                <h2 class="mb-4 text-2xl font-semibold text-amber-300">1. Glassmorphism</h2>
+                <div class="glass-card hover-lift rounded-lg p-6">
+                    <h3 class="text-xl font-bold mb-2">Kartu Kaca Premium</h3>
+                    <p class="text-gray-300 mb-4">Efek kaca frosted dengan backdrop blur dan transparansi modern.</p>
+                    <div class="flex gap-2">
+                        <span class="px-3 py-1 text-xs rounded bg-amber-500/20 border border-amber-500/30 text-amber-300">Tag 1</span>
+                        <span class="px-3 py-1 text-xs rounded bg-blue-500/20 border border-blue-500/30 text-blue-300">Tag 2</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. MICRO-INTERACTIONS -->
+            <div>
+                <h2 class="mb-4 text-2xl font-semibold text-amber-300">2. Micro-Interactions</h2>
+                <div class="space-y-4">
+                    <button class="w-full hover-glow rounded-lg bg-orange-600 px-6 py-3 font-semibold text-white">
+                        Button dengan Glow Effect
+                    </button>
+                    <div class="hover-lift glass-card rounded-lg p-4">
+                        <p class="text-sm">Hover untuk lift effect ⬆️</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. CARD 3D TILT -->
+            <div>
+                <h2 class="mb-4 text-2xl font-semibold text-amber-300">4. Card 3D Tilt</h2>
+                <div class="card-tilt glass-card rounded-lg p-6 relative overflow-hidden">
+                    <div class="card-tilt-shine"></div>
+                    <h3 class="text-xl font-bold mb-2">Gerakkan Mouse Disini</h3>
+                    <p class="text-gray-300">Kartu mengikuti pergerakan mouse dengan efek 3D dan shine overlay</p>
+                </div>
+            </div>
+
+            <!-- 7. ANIMATED BADGES -->
+            <div>
+                <h2 class="mb-4 text-2xl font-semibold text-amber-300">7. Animated Badges</h2>
+                <div class="glass-card rounded-lg p-6 space-y-4">
+                    <div class="flex flex-wrap gap-2">
+                        <span class="badge-new rounded px-3 py-1 text-xs font-bold uppercase tracking-wider">Baru</span>
+                        <span class="px-3 py-1 text-xs rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">Tersedia</span>
+                        <span class="px-3 py-1 text-xs rounded bg-slate-700 border border-slate-600 text-slate-300">Kategori</span>
+                    </div>
+                    <p class="text-sm text-gray-400">Badge "Baru" dengan shimmer, pulse, dan glow animation</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- KOMBINASI SEMUA EFFECT -->
+        <div class="mt-12">
+            <h2 class="mb-6 text-3xl font-bold text-center text-amber-300">Kombinasi: Kartu Buku Modern</h2>
+            <div class="card-tilt glass-card hover-lift rounded-lg p-6 relative overflow-hidden">
+                <div class="card-tilt-shine"></div>
+                <div class="flex gap-4">
+                    <div class="w-24 h-32 bg-gradient-to-br from-amber-600 to-orange-700 rounded shadow-lg"></div>
+                    <div class="flex-1">
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge-new rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider">Baru</span>
+                            <span class="px-2 py-0.5 text-[11px] rounded bg-slate-700/60 border border-slate-600 text-slate-300">Teknik Informatika</span>
+                        </div>
+                        <h3 class="text-lg font-bold mb-1">Pemrograman Web Modern</h3>
+                        <p class="text-sm text-gray-400 mb-3">Dr. Ahmad Fauzi · 245 halaman</p>
+                        <button class="hover-glow rounded bg-orange-600 px-4 py-2 text-sm font-semibold text-white">
+                            Baca Sekarang
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Card 3D Tilt Effect
+        const cards = document.querySelectorAll('.card-tilt');
+
+        cards.forEach(card => {
+            card.addEventListener('mousemove', handleTilt);
+            card.addEventListener('mouseleave', resetTilt);
+        });
+
+        function handleTilt(e) {
+            const card = e.currentTarget;
+            const rect = card.getBoundingClientRect();
+
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+
+            const tiltX = (y - 0.5) * -20;
+            const tiltY = (x - 0.5) * 20;
+
+            card.style.setProperty('--tilt-x', `${tiltX}deg`);
+            card.style.setProperty('--tilt-y', `${tiltY}deg`);
+            card.style.setProperty('--mouse-x', `${x * 100}%`);
+            card.style.setProperty('--mouse-y', `${y * 100}%`);
+        }
+
+        function resetTilt(e) {
+            const card = e.currentTarget;
+            card.style.setProperty('--tilt-x', '0deg');
+            card.style.setProperty('--tilt-y', '0deg');
+            card.style.setProperty('--mouse-x', '50%');
+            card.style.setProperty('--mouse-y', '50%');
+        }
+    </script>
+</body>
+</html>

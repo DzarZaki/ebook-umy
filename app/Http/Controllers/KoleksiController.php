@@ -47,7 +47,7 @@ class KoleksiController extends Controller
         return view('koleksi.index', [
             'tab' => $permintaan->query('tab') === 'penanda' ? 'penanda' : 'tersimpan',
             'tersimpan' => $tersimpan,
-            'bukuBerpenanda' => $this->bukuBerpenanda($pengguna->id, $pengguna->prodi_id),
+            'bukuBerpenanda' => $this->bukuBerpenanda($pengguna->id, $pengguna->prodi_id, $pengguna),
         ]);
     }
 
@@ -82,7 +82,7 @@ class KoleksiController extends Controller
      *
      * @return \Illuminate\Support\Collection<int, array{buku: Book, halaman: array<int, int>}>
      */
-    private function bukuBerpenanda(int $penggunaId, ?int $prodiId)
+    private function bukuBerpenanda(int $penggunaId, ?int $prodiId, ?\App\Models\User $pengguna)
     {
         $perBuku = Bookmark::query()
             ->where('user_id', $penggunaId)
@@ -98,7 +98,7 @@ class KoleksiController extends Controller
             ->whereIn('id', $perBuku->keys()->take(self::BATAS_BUKU_PENANDA))
             ->terbit()
             ->terlihatOleh($prodiId)
-            ->denganStatusSimpan(request()->user())
+            ->denganStatusSimpan($pengguna)
             ->with(['category', 'prodi'])
             ->orderBy('title')
             ->get()

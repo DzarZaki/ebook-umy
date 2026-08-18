@@ -42,9 +42,15 @@ class BukuController extends Controller
 
         $daftarBuku = Book::query()
             ->with(['category', 'prodi'])
+            // Cakupan disamakan dengan Tempat Sampah: buku prodi sendiri, plus
+            // buku umum hanya bila diunggah dosen ini. Tanpa ini daftar memuat
+            // buku yang pasti ditolak BookPolicy saat diklik.
             ->where(function ($kueri) use ($dosen) {
                 $kueri->where('prodi_id', $dosen->prodi_id)
-                    ->orWhereNull('prodi_id');
+                    ->orWhere(function ($umum) use ($dosen) {
+                        $umum->whereNull('prodi_id')
+                            ->where('uploaded_by', $dosen->id);
+                    });
             })
             ->latest()
             ->paginate(15)

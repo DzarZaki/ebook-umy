@@ -20,20 +20,25 @@
 
     RewriteEngine On
 
-    # Handle Authorization Header
+    # Meneruskan header Authorization ke PHP.
+    #
+    # Perhatikan kurung kurawal penutup pada %{HTTP:Authorization}: tanpa itu
+    # Apache membaca nama variabel yang tidak pernah ditutup, dan pada
+    # konfigurasi yang ketat seluruh berkas ini ditolak dengan 500 — galatnya
+    # hanya tercatat di log Apache, tidak di log Laravel.
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization]
 
-    # Handle X-XSRF-Token Header
+    # Meneruskan header X-XSRF-Token ke PHP.
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token]
 
-    # Redirect Trailing Slashes If Not A Folder...
+    # Membuang garis miring di akhir alamat bila bukan folder.
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Send Requests To Front Controller...
+    # Meneruskan semua permintaan lain ke pengendali depan.
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]

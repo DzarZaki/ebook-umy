@@ -6,6 +6,8 @@ namespace App\Support\Pdf;
 
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -32,30 +34,40 @@ class PembuatStempel
         return new self((array) config('ebook.watermark', []));
     }
 
-    /**
+        /**
      * Menyusun kalimat stempel untuk seorang pengguna.
      *
      * Dipisah sebagai method sendiri agar susunan kalimatnya bisa diuji
      * tanpa perlu benar-benar membuat berkas PDF.
+     *
+     * $awalan dapat diganti karena satu kelas ini melayani dua peristiwa
+     * yang berbeda: berkas yang diunduh dan berkas yang dibaca di penampil.
+     * Stempel yang berbunyi "Diunduh oleh" pada berkas yang tidak pernah
+     * diunduh hanya akan menyesatkan penelusuran kelak.
      */
-    public function teksUntuk(User $pengguna, ?Carbon $waktu = null): string
+    public function teksUntuk(User $pengguna, ?Carbon $waktu = null, string $awalan = 'Diunduh oleh'): string
     {
         return sprintf(
-            'Diunduh oleh %s (%s) pada %s',
+            '%s %s (%s) pada %s',
+            $awalan,
             (string) $pengguna->name,
             (string) $pengguna->email,
             ($waktu ?? Carbon::now())->format('d/m/Y'),
         );
     }
 
-    /**
+        /**
      * Membuat berkas stempel untuk seorang pengguna.
      *
      * @return string Jalur absolut berkas stempel yang dihasilkan.
      */
-    public function untukPengguna(User $pengguna, string $jalurTujuan, ?Carbon $waktu = null): string
-    {
-        return $this->tulis($this->teksUntuk($pengguna, $waktu), $jalurTujuan);
+    public function untukPengguna(
+        User $pengguna,
+        string $jalurTujuan,
+        ?Carbon $waktu = null,
+        string $awalan = 'Diunduh oleh',
+    ): string {
+        return $this->tulis($this->teksUntuk($pengguna, $waktu, $awalan), $jalurTujuan);
     }
 
     /**
@@ -125,16 +137,65 @@ class PembuatStempel
      * penyesuaian ini, nama ber-aksen atau tanda kutip melengkung akan
      * tampil sebagai karakter acak pada stempel.
      */
-    private function amankan(string $teks): string
+        /**
+     * Menyesuaikan teks dengan keterbatasan font bawaan FPDF.
+     *
+     * Font inti PDF memakai pengkodean Windows-1252, bukan UTF-8, sehingga
+     * teks harus dipetakan ke sana sebelum digambar.
+     *
+     * `//TRANSLIT` sengaja TIDAK dipakai: perilakunya ditentukan pustaka
+     * iconv sistem operasi, sehingga stempel yang sama bisa berbunyi "李明"
+     * → "??" di satu server dan menjadi kosong di server lain. Urutan di
+     * bawah ini memberi hasil yang sama di mana pun:
+     *
+     *   1. Konversi ketat. Nama ber-aksen Latin (é, ü, ñ) lolos utuh, karena
+     *      Windows-1252 memang memuatnya — sebelumnya justru diubah paksa
+     *      menjadi e, u, n oleh //TRANSLIT.
+     *   2. Bila ada huruf di luar Windows-1252, seluruh teks dialihkan ke
+     *      ASCII memakai tabel transliterasi Laravel (deterministik).
+     *   3. Bila masih gagal, sisakan hanya ASCII yang dapat dicetak.
+     *
+     * Bersifat public agar susunan hurufnya dapat diuji tanpa membuat berkas
+     * PDF, sama seperti teksUntuk().
+     */
+    public function amankan(string $teks): string
     {
         $teks = trim((string) preg_replace('/\s+/u', ' ', $teks));
 
-        $hasil = @iconv('UTF-8', 'Windows-1252//TRANSLIT', $teks);
-
-        if ($hasil === false) {
-            // Jalan terakhir: buang karakter di luar ASCII yang bisa dicetak.
-            $hasil = (string) preg_replace('/[^\x20-\x7E]/', '', $teks);
+        if ($teks === '') {
+            return '';
         }
+
+        $hasil = @iconv('UTF-8', 'Windows-1252', $teks);
+
+        if (is_string($hasil)) {
+            return $hasil;
+        }
+
+        $alih = Str::ascii($teks);
+
+        $hasil = @iconv('UTF-8', 'Windows-1252', $alih);
+
+        if (! is_string($hasil)) {
+            $hasil = (string) preg_replace('/[^\x20-\x7E]/', '', $alih);
+        }
+
+        /*
+         * Dicatat supaya kegagalan penelusuran tidak berlangsung diam-diam:
+         * bila nama seorang mahasiswa tidak dapat dicetak, alamat surelnya
+         * yang tetap utuh adalah penanda yang tersisa, dan pengelola perlu
+         * tahu bahwa hal itu terjadi.
+         *
+         * Nama dan surel sengaja TIDAK dimasukkan ke log — panjang teks sudah
+         * cukup untuk menandai peristiwanya tanpa menumpuk data pribadi di
+         * storage/logs. Kedua angka ini bersifat indikatif, bukan setara
+         * karakter demi karakter.
+         */
+        Log::warning('Stempel: sebagian huruf identitas tidak dapat dicetak oleh font inti PDF.', [
+            'panjang_asal' => mb_strlen($teks),
+            'panjang_hasil' => strlen($hasil),
+            'petunjuk' => 'Huruf non-Latin dialihkan ke ASCII; alamat surel tetap utuh sebagai penanda.',
+        ]);
 
         return $hasil;
     }
