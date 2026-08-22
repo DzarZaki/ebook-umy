@@ -4,6 +4,41 @@ import './animasi';
 import './pwa';
 import './card-tilt';
 
+// Inisialisasi Tema (Terang / Gelap / Sistem)
+Alpine.store('theme', {
+    mode: localStorage.getItem('theme') || 'system',
+    resolvedDark: false,
+
+    init() {
+        this.apply();
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (this.mode === 'system') {
+                this.apply();
+            }
+        });
+    },
+
+    setMode(mode) {
+        this.mode = mode;
+        if (mode === 'system') {
+            localStorage.removeItem('theme');
+        } else {
+            localStorage.setItem('theme', mode);
+        }
+        this.apply();
+    },
+
+    apply() {
+        const isDark = this.mode === 'dark' || (this.mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        this.resolvedDark = isDark;
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }
+});
+
 // PEMANGKAS BERKAS UTAMA
 // pdf.js dan pdf-lib adalah ±80% dari 583 kB berkas JS utama, padahal hanya
 // berguna di halaman baca. Dengan impor dinamis, Vite memecahnya menjadi

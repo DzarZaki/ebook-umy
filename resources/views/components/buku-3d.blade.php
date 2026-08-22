@@ -27,14 +27,14 @@
      * untuk delapan belas buku contoh yang bersampul kembar.
      */
     $paletPunggung = [
-        '#5a4430', // sepia-700
-        '#8a4518', // jingga-700
-        '#3f2f21', // sepia-800
-        '#74593f', // sepia-600
-        '#6f3714', // jingga-800
-        '#47413a', // kabut-700
-        '#572c11', // jingga-900
-        '#2e2a25', // kabut-800
+        '#1A1D26', // arang-700
+        '#A35232', // jingga-700
+        '#12151C', // arang-800
+        '#2A2E3A', // arang-600
+        '#8B4429', // jingga-800
+        '#3D3A37', // netral-700
+        '#6F3520', // jingga-900
+        '#2A2825', // netral-800
     ];
 
     $warnaPunggung = $paletPunggung[

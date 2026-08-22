@@ -19,22 +19,22 @@
          Angka besar bergaris tepi di kanan atas adalah cara Obys menandai
          bagian; di sini ia menghitung buku yang bisa Anda baca.
          ===================================================================== --}}
-    <section class="tekstur-kertas relative overflow-hidden border-b border-sepia-700 bg-sepia-900">
+    <section class="tekstur-kertas relative overflow-hidden border-b border-netral-200 dark:border-arang-600 bg-white/60 dark:bg-arang-800 transition-colors">
         <div class="mx-auto max-w-7xl px-4 pb-14 pt-12 sm:px-6 sm:pb-20 sm:pt-16 lg:px-8">
             <div class="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
 
                 <div class="max-w-3xl" data-muncul>
-                    <p class="text-label font-semibold uppercase text-jingga-700">
+                    <p class="text-label font-semibold uppercase text-jingga-600 dark:text-jingga-400">
                         {{ $sapaan }} &middot; {{ now()->translatedFormat('l, j F Y') }}
                     </p>
 
-                    <h1 class="judul-raksasa mt-4 text-raksasa text-kabut-50">
+                    <h1 class="judul-raksasa mt-4 text-raksasa text-netral-900 dark:text-netral-50">
                         {{ $namaDepan }},<br>
-                        <span class="text-kabut-400">mau baca apa</span><br>
+                        <span class="text-netral-500 dark:text-netral-400">mau baca apa</span><br>
                         hari ini?
                     </h1>
 
-                    <p class="mt-6 max-w-lg text-base leading-relaxed text-kabut-400">
+                    <p class="mt-6 max-w-lg text-base leading-relaxed text-netral-600 dark:text-netral-400">
                         @if ($pengguna->isMahasiswa())
                             Rak {{ $pengguna->prodi?->name ?? 'program studi Anda' }},
                             beserta bacaan umum dan koleksi pribadi Anda.
@@ -47,16 +47,16 @@
                 {{-- Pencacahan. Angka besar, label kecil, garis rambut. --}}
                 <dl class="flex shrink-0 gap-8 lg:gap-10" data-muncul data-tunda="180">
                     <div>
-                        <dd class="font-display text-4xl font-semibold leading-none text-kabut-50 sm:text-5xl">
+                        <dd class="font-display text-4xl font-semibold leading-none text-netral-900 dark:text-netral-50 sm:text-5xl">
                             {{ str_pad($terbaru->count() + $tersimpan->count(), 2, '0', STR_PAD_LEFT) }}
                         </dd>
-                        <dt class="mt-2 text-label font-semibold uppercase text-kabut-500">Di rak Anda</dt>
+                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Di rak Anda</dt>
                     </div>
-                    <div class="border-l border-sepia-700 pl-8 lg:pl-10">
-                        <dd class="font-display text-4xl font-semibold leading-none text-kabut-50 sm:text-5xl">
+                    <div class="border-l border-netral-200 dark:border-arang-600 pl-8 lg:pl-10">
+                        <dd class="font-display text-4xl font-semibold leading-none text-netral-900 dark:text-netral-50 sm:text-5xl">
                             {{ str_pad($lanjutkan->count(), 2, '0', STR_PAD_LEFT) }}
                         </dd>
-                        <dt class="mt-2 text-label font-semibold uppercase text-kabut-500">Sedang dibaca</dt>
+                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Sedang dibaca</dt>
                     </div>
                 </dl>
             </div>
@@ -69,13 +69,13 @@
     @unless ($adaIsi)
         <div class="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-md text-center" data-muncul>
-                <p class="text-besar text-kabut-50">Raknya masih kosong</p>
-                <p class="mt-4 text-sm leading-relaxed text-kabut-400">
+                <p class="text-besar text-netral-900 dark:text-netral-50">Raknya masih kosong</p>
+                <p class="mt-4 text-sm leading-relaxed text-netral-600 dark:text-netral-400">
                     Belum ada bacaan yang tersedia untuk program studi Anda.
                     Coba lihat katalog, atau tanyakan kepada dosen pengampu.
                 </p>
                 <a href="{{ route('katalog.index') }}"
-                   class="mt-8 inline-flex cursor-pointer items-center gap-2 rounded bg-jingga-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-jingga-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
+                   class="mt-8 inline-flex cursor-pointer items-center gap-2 rounded bg-jingga-600 dark:bg-jingga-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-jingga-700 dark:hover:bg-jingga-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
                     Buka katalog
                 </a>
             </div>
@@ -84,10 +84,6 @@
 
     {{-- =====================================================================
          3. YANG SEDANG DIBACA — satu buku, besar
-         Inilah penambal kesalahan terparah dari desain lama: satu kartu
-         kesepian di dalam grid empat kolom, dengan tiga perempat baris
-         kosong melompong. Sekarang buku itu justru menjadi pahlawan
-         halaman, ditemani punggung tebalnya sendiri.
          ===================================================================== --}}
     @if ($sedangDibaca)
         @php
@@ -97,54 +93,53 @@
             $totalUtama = $sedangDibaca['total'];
         @endphp
 
-        <section class="relative overflow-hidden border-b border-sepia-700 bg-sepia-800/20">
+        <section class="relative overflow-hidden border-b border-netral-200 dark:border-arang-600 bg-white/40 dark:bg-arang-700/20 transition-colors">
             <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-jingga-500/40 to-transparent" aria-hidden="true"></div>
             <div class="pointer-events-none absolute right-0 top-1/2 h-[600px] w-[600px] -translate-y-1/2 translate-x-1/2 rounded-full bg-jingga-400/5 blur-3xl" aria-hidden="true"></div>
             <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
                 <div class="grid items-center gap-10 sm:gap-14 lg:grid-cols-12">
 
                     <div class="order-2 lg:order-1 lg:col-span-7" data-muncul>
-                        <p class="text-label font-semibold uppercase text-jingga-700">
+                        <p class="text-label font-semibold uppercase text-jingga-600 dark:text-jingga-400">
                             Sedang dibaca
                         </p>
 
-                        <h2 class="mt-4 text-besar text-kabut-50">
+                        <h2 class="mt-4 text-besar text-netral-900 dark:text-netral-50">
                             <a href="{{ route('katalog.show', $bukuUtama) }}" class="sapu-bawah">
                                 {{ $bukuUtama->title }}
                             </a>
                         </h2>
 
-                        <p class="mt-3 text-sm text-kabut-500">
+                        <p class="mt-3 text-sm text-netral-600 dark:text-netral-400">
                             {{ $bukuUtama->author ?: 'Tanpa penulis' }}
                             &middot; {{ $bukuUtama->isUmum() ? 'Umum' : ($bukuUtama->prodi?->name ?? 'Umum') }}
                         </p>
 
-                        {{-- Kemajuan sebagai pernyataan, bukan sebagai garis
-                             tipis dua piksel yang nyaris tak terlihat. --}}
+                        {{-- Kemajuan sebagai pernyataan --}}
                         <div class="mt-8 max-w-md">
                             <div class="flex items-end justify-between gap-4">
-                                <p class="font-display text-3xl font-semibold leading-none text-kabut-50">
+                                <p class="font-display text-3xl font-semibold leading-none text-netral-900 dark:text-netral-50">
                                     {{ $persenUtama > 0 ? $persenUtama . '%' : 'Baru dimulai' }}
                                 </p>
-                                <p class="text-sm text-kabut-500">
+                                <p class="text-sm text-netral-600 dark:text-netral-400">
                                     Halaman {{ $halamanUtama }}@if ($totalUtama) dari {{ $totalUtama }}@endif
                                 </p>
                             </div>
 
-                            <div class="mt-3 h-1 w-full overflow-hidden bg-sepia-700"
+                            <div class="mt-3 h-1 w-full overflow-hidden bg-netral-200 dark:bg-arang-600"
                                  role="progressbar"
                                  aria-valuenow="{{ $persenUtama }}"
                                  aria-valuemin="0"
                                  aria-valuemax="100"
                                  aria-label="Kemajuan membaca {{ $bukuUtama->title }}">
-                                <div class="h-full bg-jingga-600 transition-[width] duration-700 ease-kertas motion-reduce:transition-none"
+                                <div class="h-full bg-jingga-600 dark:bg-jingga-500 transition-[width] duration-700 ease-kertas motion-reduce:transition-none"
                                      style="width: {{ max(2, $persenUtama) }}%"></div>
                             </div>
                         </div>
 
                         <div class="mt-8 flex flex-wrap items-center gap-3">
                             <a href="{{ route('katalog.baca', $bukuUtama) }}"
-                               class="cursor-pointer rounded bg-jingga-600 px-6 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-jingga-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
+                               class="cursor-pointer rounded bg-jingga-600 dark:bg-jingga-500 px-6 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-jingga-700 dark:hover:bg-jingga-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none shadow-sm">
                                 Lanjutkan membaca
                             </a>
                             <x-tombol-simpan :buku="$bukuUtama"
@@ -168,40 +163,36 @@
 
     {{-- =====================================================================
          4. RAK BERGULIR — Tersimpan
-         Rak sungguhan dibaca menyamping. Grid empat kolom yang menyisakan
-         lubang kosong diganti gulungan mendatar yang selalu penuh.
          ===================================================================== --}}
     @if ($tersimpan->isNotEmpty())
-        <section class="border-b border-sepia-700 bg-sepia-800/20 py-14 sm:py-20" data-rak>
+        <section class="border-b border-netral-200 dark:border-arang-600 bg-white/30 dark:bg-arang-700/20 py-14 sm:py-20 transition-colors" data-rak>
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
                 <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
                     <div data-muncul>
-                        <p class="text-label font-semibold uppercase text-kabut-500">
+                        <p class="text-label font-semibold uppercase text-netral-500 dark:text-netral-400">
                             Rak 01
                         </p>
-                        <h2 class="mt-2 text-judul text-kabut-50">
+                        <h2 class="mt-2 text-judul text-netral-900 dark:text-netral-50">
                             Koleksi Saya
-                            <span class="angka-tepi ml-1 text-kabut-400">({{ $tersimpan->count() }})</span>
+                            <span class="angka-tepi ml-1">({{ $tersimpan->count() }})</span>
                         </h2>
                     </div>
 
                     <div class="flex items-center gap-2">
-                        {{-- Kedua tombol ini disembunyikan sendiri oleh
-                             animasi.js bila seluruh rak sudah terlihat. --}}
                         <div class="flex items-center gap-2" data-rak-kendali hidden>
                             <button type="button" data-rak-mundur aria-label="Geser rak ke kiri"
-                                    class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-sepia-600 text-kabut-400 transition-colors duration-150 hover:border-sepia-400 hover:text-kabut-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-30 motion-reduce:transition-none">
+                                    class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-netral-300 dark:border-arang-500 text-netral-600 dark:text-netral-400 transition-colors duration-150 hover:border-netral-400 dark:hover:border-arang-300 hover:text-netral-900 dark:hover:text-netral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-30 motion-reduce:transition-none">
                                 &larr;
                             </button>
                             <button type="button" data-rak-maju aria-label="Geser rak ke kanan"
-                                    class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-sepia-600 text-kabut-400 transition-colors duration-150 hover:border-sepia-400 hover:text-kabut-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-30 motion-reduce:transition-none">
+                                    class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-netral-300 dark:border-arang-500 text-netral-600 dark:text-netral-400 transition-colors duration-150 hover:border-netral-400 dark:hover:border-arang-300 hover:text-netral-900 dark:hover:text-netral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-30 motion-reduce:transition-none">
                                 &rarr;
                             </button>
                         </div>
 
                         <a href="{{ route('koleksi.index') }}"
-                           class="sapu-bawah cursor-pointer text-sm font-semibold text-jingga-700 transition-colors duration-150 hover:text-jingga-800 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
+                           class="sapu-bawah cursor-pointer text-sm font-semibold text-jingga-600 dark:text-jingga-400 transition-colors duration-150 hover:text-jingga-700 dark:hover:text-jingga-300 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
                             Lihat semua
                         </a>
                     </div>
@@ -210,18 +201,16 @@
                 {{-- pb-10 memberi ruang bagi bayangan buku agar tidak terpotong
                      oleh batas gulungan. --}}
                 <div class="relative">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-sepia-900 to-transparent" aria-hidden="true"></div>
-                    <div class="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-sepia-900 to-transparent" aria-hidden="true"></div>
                 <div class="rak-gulir -mx-4 gap-8 px-4 pb-10 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
                      data-rak-isi data-tahap="70">
-                                        @foreach ($tersimpan as $buku)
+                    @foreach ($tersimpan as $buku)
                         <div class="w-32 xs:w-36 sm:w-40" data-muncul>
                             <a href="{{ route('katalog.show', $buku) }}"
                                class="block focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-4">
                                 <x-buku-3d :buku="$buku" />
                             </a>
 
-                            <p class="mt-5 line-clamp-2 text-sm font-semibold leading-snug text-kabut-50">
+                            <p class="mt-5 line-clamp-2 text-sm font-semibold leading-snug text-netral-900 dark:text-netral-50">
                                 {{ $buku->title }}
                             </p>
 
@@ -235,7 +224,7 @@
                                 <form> di dalam <a> adalah HTML tidak sah.
                             --}}
                             <div class="mt-1 flex items-center justify-between gap-2">
-                                <span class="min-w-0 truncate text-xs text-kabut-500">
+                                <span class="min-w-0 truncate text-xs text-netral-500 dark:text-netral-400">
                                     {{ $buku->author ?: 'Tanpa penulis' }}
                                 </span>
 
@@ -254,14 +243,13 @@
 
     {{-- =====================================================================
          5. MARQUEE
-         Digandakan oleh animasi.js, bukan ditulis dua kali di sini.
          ===================================================================== --}}
-    <div class="marquee border-b border-sepia-700 bg-sepia-800 py-4" aria-hidden="true">
+    <div class="marquee border-b border-netral-200 dark:border-arang-600 bg-white/70 dark:bg-arang-700 py-4 transition-colors" aria-hidden="true">
         <div class="marquee__isi" data-gandakan style="--laju: 46s">
             @foreach (['Membaca', 'Belajar', 'Menandai', 'Mengulang', 'Memahami', 'Mencatat', 'Menemukan'] as $kata)
                 <span class="flex items-center whitespace-nowrap">
-                    <span class="px-6 font-display text-lg text-kabut-50/80">{{ $kata }}</span>
-                    <span class="text-jingga-400">&#9679;</span>
+                    <span class="px-6 font-display text-lg text-netral-900/80 dark:text-netral-50/80">{{ $kata }}</span>
+                    <span class="text-jingga-600 dark:text-jingga-400">&#9679;</span>
                 </span>
             @endforeach
         </div>
@@ -269,64 +257,60 @@
 
     {{-- =====================================================================
          6. BARU DITAMBAHKAN — indeks bernomor
-         Bukan grid kartu lagi. Daftar bernomor, seperti indeks di belakang
-         buku, dengan buku 3D kecil yang muncul saat barisnya disentuh.
          ===================================================================== --}}
     @if ($terbaru->isNotEmpty())
-        <section class="bg-sepia-800/10 py-14 sm:py-20">
+        <section class="bg-white/40 dark:bg-arang-700/10 py-14 sm:py-20 transition-colors">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
                 <div class="mb-8 flex flex-wrap items-end justify-between gap-4" data-muncul>
                     <div>
-                        <p class="text-label font-semibold uppercase text-kabut-500">Rak 02</p>
-                        <h2 class="mt-2 text-judul text-kabut-50">
+                        <p class="text-label font-semibold uppercase text-netral-500 dark:text-netral-400">Rak 02</p>
+                        <h2 class="mt-2 text-judul text-netral-900 dark:text-netral-50">
                             Baru ditambahkan
-                            <span class="angka-tepi ml-1 text-kabut-400">({{ $terbaru->count() }})</span>
+                            <span class="angka-tepi ml-1">({{ $terbaru->count() }})</span>
                         </h2>
                     </div>
 
                     <a href="{{ route('katalog.index') }}"
-                       class="sapu-bawah cursor-pointer text-sm font-semibold text-jingga-700 transition-colors duration-150 hover:text-jingga-800 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
+                       class="sapu-bawah cursor-pointer text-sm font-semibold text-jingga-600 dark:text-jingga-400 transition-colors duration-150 hover:text-jingga-700 dark:hover:text-jingga-300 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
                         Lihat katalog
                     </a>
                 </div>
 
-                <ol class="border-t border-sepia-700" data-tahap="60">
+                <ol class="border-t border-netral-200 dark:border-arang-600" data-tahap="60">
                     @foreach ($terbaru as $i => $buku)
-                        <li class="group relative border-b border-sepia-700" data-muncul>
-                            <span class="pointer-events-none absolute inset-y-0 left-0 w-0.5 origin-top scale-y-0 bg-jingga-500 transition-transform duration-300 group-hover:scale-y-100 motion-reduce:transition-none" aria-hidden="true"></span>
+                        <li class="group relative border-b border-netral-200 dark:border-arang-600" data-muncul>
+                            <span class="pointer-events-none absolute inset-y-0 left-0 w-0.5 origin-top scale-y-0 bg-jingga-600 dark:bg-jingga-400 transition-transform duration-300 group-hover:scale-y-100 motion-reduce:transition-none" aria-hidden="true"></span>
                             <a href="{{ route('katalog.show', $buku) }}"
-                               class="flex items-center gap-5 py-5 transition-colors duration-200 hover:bg-sepia-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-jingga-600 motion-reduce:transition-none sm:gap-8">
+                               class="flex items-center gap-5 py-5 transition-colors duration-200 hover:bg-netral-100/70 dark:hover:bg-arang-700/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-jingga-600 motion-reduce:transition-none sm:gap-8">
 
-                                <span class="w-8 shrink-0 pl-1 font-display text-xl text-kabut-300 transition-colors duration-200 group-hover:text-jingga-600 sm:w-12 sm:text-2xl">
+                                <span class="w-8 shrink-0 pl-1 font-display text-xl text-netral-400 dark:text-netral-300 transition-colors duration-200 group-hover:text-jingga-600 dark:group-hover:text-jingga-400 sm:w-12 sm:text-2xl">
                                     {{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}
                                 </span>
 
-                                {{-- Buku 3D kecil. Di ponsel disembunyikan:
-                                     baris setinggi 80 px tidak menyisakan ruang
-                                     untuk benda bervolume. --}}
+                                {{-- Buku 3D kecil --}}
                                 <span class="hidden w-14 shrink-0 sm:block">
                                     <x-buku-3d :buku="$buku" :punggung="false" />
                                 </span>
 
                                 <span class="min-w-0 flex-1">
-                                    <span class="block truncate font-display text-base font-semibold text-kabut-50 sm:text-lg">
+                                    <span class="block truncate font-display text-base font-semibold text-netral-900 dark:text-netral-50 sm:text-lg">
                                         {{ $buku->title }}
                                     </span>
-                                    <span class="mt-1 block truncate text-xs text-kabut-500 sm:text-sm">
+                                    <span class="mt-1 block truncate text-xs text-netral-500 dark:text-netral-400 sm:text-sm">
                                         {{ $buku->author ?: 'Tanpa penulis' }}
                                         &middot; {{ $buku->isUmum() ? 'Umum' : ($buku->prodi?->name ?? 'Umum') }}
                                         @if ($buku->created_at && $buku->created_at->gt(now()->subDays(14)))
-                                            &middot; <span class="font-semibold text-jingga-700">Baru</span>
+                                            &middot; <span class="font-semibold text-jingga-600 dark:text-jingga-400">Baru</span>
                                         @endif
                                     </span>
                                 </span>
 
-                                <span class="hidden shrink-0 text-xs text-kabut-500 md:block">
+                                <span class="hidden shrink-0 text-xs text-netral-500 dark:text-netral-400 md:block">
                                     {{ $buku->labelAkses() }}
                                 </span>
 
-                                <span class="shrink-0 pr-1 text-kabut-300 transition-all duration-200 group-hover:translate-x-1 group-hover:text-jingga-600 motion-reduce:transition-none"
+                                <span class="shrink-0 pr-1 text-netral-400 dark:text-netral-300 transition-all duration-200 group-hover:translate-x-1 group-hover:text-jingga-600 dark:group-hover:text-jingga-400 motion-reduce:transition-none"
                                       aria-hidden="true">
                                     &rarr;
                                 </span>

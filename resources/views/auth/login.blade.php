@@ -25,15 +25,15 @@
         <div class="mt-5">
             <label for="remember_me" class="inline-flex cursor-pointer items-center">
                 <input id="remember_me" type="checkbox"
-                       class="rounded border-netral-300 text-sienna shadow-sm focus:ring-sienna"
+                       class="rounded border-netral-300 dark:border-arang-600 bg-white dark:bg-arang-700 text-jingga-600 focus:ring-jingga-500"
                        name="remember">
-                <span class="ms-2 text-sm text-netral-300">Ingat saya</span>
+                <span class="ms-2 text-sm text-netral-600 dark:text-netral-300">Ingat saya</span>
             </label>
         </div>
 
         <div class="mt-7 flex items-center justify-between">
             @if (Route::has('password.request'))
-                <a class="text-sm text-netral-300 underline-offset-2 hover:text-netral-100 hover:underline transition-colors duration-150 rounded-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sienna"
+                <a class="text-sm text-netral-600 dark:text-netral-400 underline-offset-2 hover:text-netral-900 dark:hover:text-netral-100 hover:underline transition-colors duration-150 rounded-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-jingga-500"
                    href="{{ route('password.request') }}">
                     Lupa kata sandi?
                 </a>

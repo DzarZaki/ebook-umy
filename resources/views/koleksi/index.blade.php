@@ -12,17 +12,17 @@
     {{-- =====================================================================
          1. KEPALA
          ===================================================================== --}}
-    <section class="tekstur-kertas border-b border-sepia-700 bg-sepia-900">
+    <section class="tekstur-kertas border-b border-netral-200 dark:border-arang-600 bg-white/60 dark:bg-arang-800 transition-colors">
         <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
             <div class="flex flex-wrap items-end justify-between gap-8" data-muncul>
                 <div class="max-w-xl">
-                    <p class="text-label font-semibold uppercase text-jingga-700">Rak pribadi</p>
+                    <p class="text-label font-semibold uppercase text-jingga-600 dark:text-jingga-400">Rak pribadi</p>
 
-                    <h1 class="judul-raksasa mt-3 text-besar text-kabut-50">
+                    <h1 class="judul-raksasa mt-3 text-besar text-netral-900 dark:text-netral-50">
                         Koleksi Saya
                     </h1>
 
-                    <p class="mt-4 text-sm leading-relaxed text-kabut-400">
+                    <p class="mt-4 text-sm leading-relaxed text-netral-600 dark:text-netral-400">
                         Buku yang Anda simpan sendiri, beserta halaman-halaman
                         yang Anda tandai saat membaca.
                     </p>
@@ -30,16 +30,16 @@
 
                 <dl class="flex gap-8 lg:gap-10">
                     <div>
-                        <dd class="font-display text-4xl font-semibold leading-none text-kabut-50 sm:text-5xl">
+                        <dd class="font-display text-4xl font-semibold leading-none text-netral-900 dark:text-netral-50 sm:text-5xl">
                             {{ str_pad($tersimpan->total(), 2, '0', STR_PAD_LEFT) }}
                         </dd>
-                        <dt class="mt-2 text-label font-semibold uppercase text-kabut-500">Buku<br>tersimpan</dt>
+                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Buku<br>tersimpan</dt>
                     </div>
-                    <div class="border-l border-sepia-700 pl-8 lg:pl-10">
-                        <dd class="font-display text-4xl font-semibold leading-none text-kabut-50 sm:text-5xl">
+                    <div class="border-l border-netral-200 dark:border-arang-600 pl-8 lg:pl-10">
+                        <dd class="font-display text-4xl font-semibold leading-none text-netral-900 dark:text-netral-50 sm:text-5xl">
                             {{ str_pad($jumlahHalamanDitandai, 2, '0', STR_PAD_LEFT) }}
                         </dd>
-                        <dt class="mt-2 text-label font-semibold uppercase text-kabut-500">Halaman<br>ditandai</dt>
+                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Halaman<br>ditandai</dt>
                     </div>
                 </dl>
             </div>
@@ -48,31 +48,28 @@
 
     {{-- =====================================================================
          2. TAB BERNOMOR
-         Tetap tautan biasa, bukan JavaScript: bisa ditandai sebagai favorit,
-         bisa dibuka di tab baru, dan tetap bekerja bila skrip gagal dimuat.
-         Bentuknya saja yang berubah — nomor di atas, nama di bawah.
          ===================================================================== --}}
-    <nav class="border-b border-sepia-700 bg-sepia-800/30" aria-label="Bagian koleksi">
+    <nav class="border-b border-netral-200 dark:border-arang-600 bg-white/40 dark:bg-arang-700/30 transition-colors" aria-label="Bagian koleksi">
         <div class="mx-auto flex max-w-7xl gap-8 px-4 sm:gap-12 sm:px-6 lg:px-8">
             <a href="{{ route('koleksi.index') }}"
                @if ($tab === 'tersimpan') aria-current="page" @endif
                @class([
                    'group -mb-px cursor-pointer border-b-2 py-5 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600',
-                   'border-jingga-600' => $tab === 'tersimpan',
-                   'border-transparent hover:border-sepia-600' => $tab !== 'tersimpan',
+                   'border-jingga-600 dark:border-jingga-400' => $tab === 'tersimpan',
+                   'border-transparent hover:border-netral-300 dark:hover:border-arang-500' => $tab !== 'tersimpan',
                ])>
                 <span @class([
                     'block font-display text-lg transition-colors duration-150 motion-reduce:transition-none',
-                    'text-jingga-600' => $tab === 'tersimpan',
-                    'text-kabut-300 group-hover:text-kabut-500' => $tab !== 'tersimpan',
+                    'text-jingga-600 dark:text-jingga-400' => $tab === 'tersimpan',
+                    'text-netral-400 dark:text-netral-300 group-hover:text-netral-600 dark:group-hover:text-netral-100' => $tab !== 'tersimpan',
                 ])>01</span>
                 <span @class([
                     'mt-1 block text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none',
-                    'text-kabut-50' => $tab === 'tersimpan',
-                    'text-kabut-500 group-hover:text-kabut-300' => $tab !== 'tersimpan',
+                    'text-netral-900 dark:text-netral-50' => $tab === 'tersimpan',
+                    'text-netral-500 dark:text-netral-400 group-hover:text-netral-700 dark:group-hover:text-netral-200' => $tab !== 'tersimpan',
                 ])>
                     Tersimpan
-                    <span class="font-normal text-kabut-400">({{ $tersimpan->total() }})</span>
+                    <span class="font-normal text-netral-400">({{ $tersimpan->total() }})</span>
                 </span>
             </a>
 
@@ -80,32 +77,32 @@
                @if ($tab === 'penanda') aria-current="page" @endif
                @class([
                    'group -mb-px cursor-pointer border-b-2 py-5 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600',
-                   'border-jingga-600' => $tab === 'penanda',
-                   'border-transparent hover:border-sepia-600' => $tab !== 'penanda',
+                   'border-jingga-600 dark:border-jingga-400' => $tab === 'penanda',
+                   'border-transparent hover:border-netral-300 dark:hover:border-arang-500' => $tab !== 'penanda',
                ])>
                 <span @class([
                     'block font-display text-lg transition-colors duration-150 motion-reduce:transition-none',
-                    'text-jingga-600' => $tab === 'penanda',
-                    'text-kabut-300 group-hover:text-kabut-500' => $tab !== 'penanda',
+                    'text-jingga-600 dark:text-jingga-400' => $tab === 'penanda',
+                    'text-netral-400 dark:text-netral-300 group-hover:text-netral-600 dark:group-hover:text-netral-100' => $tab !== 'penanda',
                 ])>02</span>
                 <span @class([
                     'mt-1 block text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none',
-                    'text-kabut-50' => $tab === 'penanda',
-                    'text-kabut-500 group-hover:text-kabut-300' => $tab !== 'penanda',
+                    'text-netral-900 dark:text-netral-50' => $tab === 'penanda',
+                    'text-netral-500 dark:text-netral-400 group-hover:text-netral-700 dark:group-hover:text-netral-200' => $tab !== 'penanda',
                 ])>
                     Penanda halaman
-                    <span class="font-normal text-kabut-400">({{ $jumlahBukuBerpenanda }})</span>
+                    <span class="font-normal text-netral-400">({{ $jumlahBukuBerpenanda }})</span>
                 </span>
             </a>
         </div>
     </nav>
 
-    <section class="bg-sepia-800/10 py-12 sm:py-16">
+    <section class="bg-transparent py-12 sm:py-16">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
             {{-- Pesan hasil menyimpan/melepas buku. --}}
             @if (session('status'))
-                <div class="mb-10 border-l-2 border-jingga-500 bg-jingga-900/30 px-4 py-3 text-sm text-jingga-300"
+                <div class="mb-10 border-l-2 border-jingga-600 dark:border-jingga-500 bg-jingga-50 dark:bg-jingga-900/30 px-4 py-3 text-sm text-jingga-800 dark:text-jingga-300"
                      role="status">
                     {{ session('status') }}
                 </div>
@@ -115,13 +112,13 @@
 
                 @if ($tersimpan->isEmpty())
                     <div class="mx-auto max-w-md py-16 text-center" data-muncul>
-                        <p class="text-besar text-kabut-50">Rak ini masih kosong</p>
-                        <p class="mt-4 text-sm leading-relaxed text-kabut-400">
+                        <p class="text-besar text-netral-900 dark:text-netral-50">Rak ini masih kosong</p>
+                        <p class="mt-4 text-sm leading-relaxed text-netral-600 dark:text-netral-400">
                             Tekan pita di sudut buku mana pun untuk menyimpannya ke sini,
                             supaya mudah ditemukan lagi nanti.
                         </p>
                         <a href="{{ route('katalog.index') }}"
-                           class="mt-8 inline-flex cursor-pointer items-center rounded bg-jingga-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-jingga-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
+                           class="mt-8 inline-flex cursor-pointer items-center rounded bg-jingga-600 dark:bg-jingga-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-jingga-700 dark:hover:bg-jingga-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none shadow-sm">
                             Jelajahi katalog
                         </a>
                     </div>
@@ -151,18 +148,18 @@
                                     <x-buku-3d :buku="$buku" />
                                 </a>
 
-                                <p class="mt-5 line-clamp-2 text-sm font-semibold leading-snug text-kabut-50">
+                                <p class="mt-5 line-clamp-2 text-sm font-semibold leading-snug text-netral-900 dark:text-netral-50">
                                     {{ $buku->title }}
                                 </p>
 
-                                <p class="mt-1 truncate text-xs text-kabut-500">
+                                <p class="mt-1 truncate text-xs text-netral-500 dark:text-netral-400">
                                     {{ $buku->author ?: 'Tanpa penulis' }}
                                 </p>
 
                                 {{-- Pita di luar tautan di atas: <form> di dalam
                                      <a> adalah HTML tidak sah. --}}
                                 <div class="mt-3 flex items-center justify-between gap-2">
-                                    <span class="truncate text-[11px] font-medium uppercase tracking-wider text-kabut-400">
+                                    <span class="truncate text-[11px] font-medium uppercase tracking-wider text-netral-500 dark:text-netral-400">
                                         {{ $buku->isUmum() ? 'Umum' : ($buku->prodi?->name ?? 'Umum') }}
                                     </span>
 
@@ -182,28 +179,21 @@
 
                 @if ($bukuBerpenanda->isEmpty())
                     <div class="mx-auto max-w-md py-16 text-center" data-muncul>
-                        <p class="text-besar text-kabut-50">Belum ada halaman ditandai</p>
-                        <p class="mt-4 text-sm leading-relaxed text-kabut-400">
+                        <p class="text-besar text-netral-900 dark:text-netral-50">Belum ada halaman ditandai</p>
+                        <p class="mt-4 text-sm leading-relaxed text-netral-600 dark:text-netral-400">
                             Saat membaca, tekan tombol penanda di pembaca untuk menyimpan
                             halaman penting. Semuanya akan berkumpul di sini.
                         </p>
                     </div>
                 @else
-                    {{--
-                        Penanda tidak berbentuk kartu, dan itu keputusan lama
-                        yang saya pertahankan: satu buku bisa punya belasan
-                        halaman ditandai, dan keping halaman sebanyak itu akan
-                        membungkus jadi tumpukan tak terbaca di dalam kartu
-                        selebar 250 px. Bentuk mengikuti isi.
-                    --}}
-                    <ol class="border-t border-sepia-700" data-tahap="60">
+                    <ol class="border-t border-netral-200 dark:border-arang-600" data-tahap="60">
                         @foreach ($bukuBerpenanda as $i => $baris)
                             @php($buku = $baris['buku'])
 
-                            <li class="border-b border-sepia-700 py-8" data-muncul>
+                            <li class="border-b border-netral-200 dark:border-arang-600 py-8" data-muncul>
                                 <div class="flex items-start gap-5 sm:gap-8">
 
-                                    <span class="w-7 shrink-0 pt-1 font-display text-lg text-kabut-300 sm:w-12 sm:text-2xl">
+                                    <span class="w-7 shrink-0 pt-1 font-display text-lg text-netral-400 dark:text-netral-300 sm:w-12 sm:text-2xl">
                                         {{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}
                                     </span>
 
@@ -217,14 +207,14 @@
                                     <div class="min-w-0 flex-1">
                                         <div class="flex flex-wrap items-start justify-between gap-3">
                                             <div class="min-w-0">
-                                                <h2 class="text-lg font-semibold leading-snug text-kabut-50 sm:text-xl">
+                                                <h2 class="text-lg font-semibold leading-snug text-netral-900 dark:text-netral-50 sm:text-xl">
                                                     <a href="{{ route('katalog.show', $buku) }}"
                                                        class="sapu-bawah cursor-pointer focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2">
                                                         {{ $buku->title }}
                                                     </a>
                                                 </h2>
 
-                                                <p class="mt-1.5 text-xs text-kabut-500 sm:text-sm">
+                                                <p class="mt-1.5 text-xs text-netral-500 dark:text-netral-400 sm:text-sm">
                                                     {{ $buku->author ?: 'Tanpa penulis' }}
                                                     &middot; {{ count($baris['halaman']) }} halaman ditandai
                                                 </p>
@@ -233,13 +223,12 @@
                                             <x-tombol-simpan :buku="$buku" class="shrink-0" />
                                         </div>
 
-                                        {{-- Keping halaman: nomornya dicetak besar,
-                                             karena nomor itulah yang dicari mata. --}}
+                                        {{-- Keping halaman --}}
                                         <div class="mt-5 flex flex-wrap gap-2">
                                             @foreach ($baris['halaman'] as $halaman)
                                                 <a href="{{ route('katalog.baca', ['buku' => $buku, 'halaman' => $halaman]) }}"
-                                                   class="group cursor-pointer border border-sepia-600 bg-sepia-800 px-3 py-1.5 text-xs font-medium text-kabut-300 transition-colors duration-150 hover:border-jingga-500 hover:bg-jingga-900/30 hover:text-jingga-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-sepia-900 motion-reduce:transition-none">
-                                                    Hal. <span class="font-display text-sm font-semibold text-kabut-100 transition-colors duration-150 group-hover:text-jingga-400 motion-reduce:transition-none">{{ $halaman }}</span>
+                                                   class="group cursor-pointer rounded border border-netral-200 dark:border-arang-500 bg-white dark:bg-arang-700 px-3 py-1.5 text-xs font-medium text-netral-700 dark:text-netral-300 transition-colors duration-150 hover:border-jingga-500 hover:bg-jingga-50 dark:hover:bg-jingga-900/30 hover:text-jingga-600 dark:hover:text-jingga-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-netral-100 dark:focus-visible:ring-offset-arang-800 motion-reduce:transition-none shadow-sm">
+                                                    Hal. <span class="font-display text-sm font-semibold text-netral-900 dark:text-netral-100 transition-colors duration-150 group-hover:text-jingga-600 dark:group-hover:text-jingga-400 motion-reduce:transition-none">{{ $halaman }}</span>
                                                 </a>
                                             @endforeach
                                         </div>

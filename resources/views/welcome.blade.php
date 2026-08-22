@@ -6,16 +6,29 @@
     <title>Pustaka Dosen — Perpustakaan Digital Mahasiswa</title>
     <meta name="description" content="Koleksi e-book dan artikel kuliah yang disusun sendiri oleh dosen pengampu, dapat dibaca gratis oleh mahasiswa.">
 
+    {{-- Script pencegah kedipan tema (FOUC) saat halaman dimuat --}}
+    <script>
+        (function() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'dark' || (!saved && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
     <link rel="manifest" href="/manifest.webmanifest">
-    <meta name="theme-color" content="#0B0E14">
+    <meta name="theme-color" content="#101113">
     <link rel="apple-touch-icon" href="/images/icon-192.png">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|playfair-display:400,600,700&display=swap" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="font-sans antialiased bg-arang-deepest text-netral-100">
+<body class="font-sans antialiased bg-netral-100 dark:bg-arang-900 text-netral-900 dark:text-netral-100 transition-colors">
 
     {{-- =================================================================
          BILAH ATAS
@@ -24,22 +37,40 @@
         <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 lg:px-10">
             <a href="{{ route('beranda') }}" class="flex items-center gap-2.5">
                 <img src="{{ asset('images/logo.svg') }}" alt="" class="h-8 w-8">
-                <span class="font-display text-base font-semibold tracking-tight text-netral-100">Pustaka Dosen</span>
+                <span class="font-display text-base font-semibold tracking-tight text-netral-900 dark:text-netral-100">Pustaka Dosen</span>
             </a>
 
-            <nav class="flex items-center gap-5">
+            <nav class="flex items-center gap-4">
+                {{-- Theme toggle di header landing page --}}
+                <div x-data>
+                    <button @click="$store.theme.setMode($store.theme.mode === 'dark' ? 'light' : ($store.theme.mode === 'light' ? 'system' : 'dark'))"
+                            type="button"
+                            :title="'Mode: ' + $store.theme.mode"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-netral-200 dark:border-arang-600 bg-white/80 dark:bg-arang-700 text-netral-600 dark:text-netral-300 transition hover:text-jingga-600 dark:hover:text-jingga-400">
+                        <svg x-show="$store.theme.mode === 'light'" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <svg x-show="$store.theme.mode === 'dark'" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                        <svg x-show="$store.theme.mode === 'system'" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
+
                 @auth
                     <a href="{{ route('dashboard') }}"
-                       class="bg-arang-deep px-5 py-2.5 text-label font-semibold uppercase tracking-[0.18em] text-netral-100 transition-colors duration-200 hover:bg-arang-base">
+                       class="bg-white dark:bg-arang-700 border border-netral-200 dark:border-arang-600 px-5 py-2.5 text-label font-semibold uppercase tracking-[0.18em] text-netral-900 dark:text-netral-100 transition-colors duration-200 hover:bg-netral-100 dark:hover:bg-arang-600">
                         Masuk ke Beranda
                     </a>
                 @else
                     <a href="{{ route('login') }}"
-                       class="sapu-bawah text-label font-semibold uppercase tracking-[0.18em] text-netral-200">
+                       class="sapu-bawah text-label font-semibold uppercase tracking-[0.18em] text-netral-700 dark:text-netral-200">
                         Masuk
                     </a>
                     <a href="{{ route('register') }}"
-                       class="bg-arang-deep px-5 py-2.5 text-label font-semibold uppercase tracking-[0.18em] text-netral-100 transition-colors duration-200 hover:bg-arang-base">
+                       class="bg-white dark:bg-arang-700 border border-netral-200 dark:border-arang-600 px-5 py-2.5 text-label font-semibold uppercase tracking-[0.18em] text-netral-900 dark:text-netral-100 transition-colors duration-200 hover:bg-netral-100 dark:hover:bg-arang-600">
                         Daftar
                     </a>
                 @endauth
@@ -58,7 +89,7 @@
          terbuka = true  -> terbuka
          terbuka = false -> ditutup kembali oleh pengguna
          ================================================================= --}}
-    <section class="tekstur-kertas relative overflow-hidden border-b border-arang-base bg-arang-deepest">
+    <section class="tekstur-kertas relative overflow-hidden border-b border-netral-200 dark:border-arang-600 bg-white/50 dark:bg-arang-900/60 transition-colors">
         <div class="mx-auto max-w-5xl px-6 pb-24 pt-32 lg:px-10 lg:pb-28 lg:pt-40">
 
             <div x-data="{ terbuka: null }"
@@ -71,27 +102,27 @@
                     <div class="buku-muka__bayang" aria-hidden="true"></div>
 
                     {{-- Halaman kiri --}}
-                    <div class="buku-muka__lembar buku-muka__lembar--kiri">
+                    <div class="buku-muka__lembar buku-muka__lembar--kiri border border-netral-200 dark:border-transparent">
                         <div class="flex h-full flex-col justify-between p-8 sm:p-10 lg:p-12">
                             <div>
-                                <p class="text-label font-semibold uppercase tracking-[0.24em] text-sienna">
+                                <p class="text-label font-semibold uppercase tracking-[0.24em] text-jingga-600">
                                     Koleksi pribadi dosen pengampu
                                 </p>
 
-                                <h1 class="mt-6 font-display text-2xl font-semibold leading-[1.2] text-arang-deepest sm:text-3xl lg:text-4xl">
+                                <h1 class="mt-6 font-display text-2xl font-semibold leading-[1.2] text-netral-900 sm:text-3xl lg:text-4xl">
                                     Bahan bacaan kuliah yang ditulis dosen Anda sendiri&mdash;bukan hasil unggahan sembarangan.
                                 </h1>
                             </div>
 
-                            <p class="mt-8 hidden font-display text-sm text-netral-300 md:block" aria-hidden="true">01</p>
+                            <p class="mt-8 hidden font-display text-sm text-netral-400 md:block" aria-hidden="true">01</p>
                         </div>
                     </div>
 
                     {{-- Halaman kanan --}}
-                    <div class="buku-muka__lembar buku-muka__lembar--kanan">
+                    <div class="buku-muka__lembar buku-muka__lembar--kanan border border-netral-200 dark:border-transparent">
                         <div class="flex h-full flex-col justify-between p-8 sm:p-10 lg:p-12">
                             <div>
-                                <p class="text-base leading-relaxed text-netral-300">
+                                <p class="text-base leading-relaxed text-netral-600">
                                     Setiap e-book dan artikel di sini diunggah langsung oleh dosen pengampu, lalu
                                     dikelompokkan menurut program studi. Mahasiswa cukup mendaftar dengan email pribadi,
                                     membaca langsung di situs ini, dan mengunduh bila dosen mengizinkan.
@@ -99,17 +130,17 @@
 
                                 <div class="mt-8 flex flex-wrap items-center gap-5">
                                     <a href="{{ route('register') }}"
-                                       class="bg-sienna px-6 py-3.5 text-sm font-semibold text-white hover:bg-sienna-dark btn-press rounded">
+                                       class="bg-jingga-600 px-6 py-3.5 text-sm font-semibold text-white hover:bg-jingga-700 btn-press rounded shadow-sm">
                                         Daftar dengan email pribadi
                                     </a>
                                     <a href="{{ route('login') }}"
-                                       class="sapu-bawah text-sm font-semibold text-netral-200">
+                                       class="sapu-bawah text-sm font-semibold text-netral-700">
                                         Sudah punya akun
                                     </a>
                                 </div>
                             </div>
 
-                            <p class="mt-8 hidden text-right font-display text-sm text-netral-300 md:block" aria-hidden="true">02</p>
+                            <p class="mt-8 hidden text-right font-display text-sm text-netral-400 md:block" aria-hidden="true">02</p>
                         </div>
                     </div>
 
@@ -124,15 +155,15 @@
                             aria-label="Buka buku dan tampilkan keterangan">
                         <span class="flex h-full flex-col justify-between p-8 sm:p-10 lg:p-12">
                             <span class="block">
-                                <span class="block text-label font-semibold uppercase tracking-[0.24em] text-sienna-light">
+                                <span class="block text-label font-semibold uppercase tracking-[0.24em] text-jingga-400">
                                     Perpustakaan digital
                                 </span>
 
-                                <span class="mt-6 block font-display text-3xl font-semibold leading-tight text-netral-100 lg:text-4xl">
+                                <span class="mt-6 block font-display text-3xl font-semibold leading-tight text-white lg:text-4xl">
                                     Pustaka Dosen
                                 </span>
 
-                                <span class="mt-6 block h-px w-16 bg-sienna"></span>
+                                <span class="mt-6 block h-px w-16 bg-jingga-500"></span>
 
                                 <span class="mt-6 block max-w-xs text-sm leading-relaxed text-netral-200">
                                     Ditulis dosen pengampu, dibaca mahasiswa.
@@ -154,7 +185,7 @@
                             x-cloak
                             x-show="terbuka === true"
                             @click="terbuka = false"
-                            class="sapu-bawah text-label font-semibold uppercase tracking-[0.2em] text-netral-300">
+                            class="sapu-bawah text-label font-semibold uppercase tracking-[0.2em] text-netral-500 dark:text-netral-400">
                         Tutup buku
                     </button>
 
@@ -162,13 +193,13 @@
                             x-cloak
                             x-show="terbuka === false"
                             @click="terbuka = true"
-                            class="sapu-bawah text-label font-semibold uppercase tracking-[0.2em] text-netral-300">
+                            class="sapu-bawah text-label font-semibold uppercase tracking-[0.2em] text-netral-500 dark:text-netral-400">
                         Buka buku
                     </button>
                 </div>
             </div>
 
-            <p data-muncul class="mt-8 text-center text-label uppercase tracking-[0.2em] text-netral-300">
+            <p data-muncul class="mt-8 text-center text-label uppercase tracking-[0.2em] text-netral-500 dark:text-netral-400">
                 Rak digital &middot; Disusun dosen, dibaca mahasiswa
             </p>
         </div>
@@ -177,19 +208,19 @@
     {{-- =================================================================
          PITA BERJALAN
          ================================================================= --}}
-    <div class="border-b border-arang-base bg-arang-deep py-4 text-netral-100">
+    <div class="border-b border-netral-200 dark:border-arang-600 bg-white/70 dark:bg-arang-700 py-4 text-netral-900 dark:text-netral-100 transition-colors">
         <div class="marquee">
             <div class="marquee__isi" data-gandakan style="--laju: 52s">
                 <span class="font-display text-lg font-semibold tracking-tight">Diunggah dosen</span>
-                <span class="text-sienna-light">&#9679;</span>
+                <span class="text-jingga-600 dark:text-jingga-400">&#9679;</span>
                 <span class="font-display text-lg font-semibold tracking-tight">Gratis untuk mahasiswa</span>
-                <span class="text-sienna-light">&#9679;</span>
+                <span class="text-jingga-600 dark:text-jingga-400">&#9679;</span>
                 <span class="font-display text-lg font-semibold tracking-tight">Buka dan langsung baca</span>
-                <span class="text-sienna-light">&#9679;</span>
+                <span class="text-jingga-600 dark:text-jingga-400">&#9679;</span>
                 <span class="font-display text-lg font-semibold tracking-tight">Tanpa aplikasi tambahan</span>
-                <span class="text-sienna-light">&#9679;</span>
+                <span class="text-jingga-600 dark:text-jingga-400">&#9679;</span>
                 <span class="font-display text-lg font-semibold tracking-tight">Sesuai program studi</span>
-                <span class="text-sienna-light">&#9679;</span>
+                <span class="text-jingga-600 dark:text-jingga-400">&#9679;</span>
             </div>
         </div>
     </div>
@@ -198,9 +229,9 @@
          CARA KERJANYA
          ================================================================= --}}
     <section class="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
-        <div class="flex items-baseline justify-between gap-6 border-b border-arang-base pb-5">
-            <h2 class="font-display text-judul font-semibold text-netral-100">Cara kerjanya</h2>
-            <span class="text-label uppercase tracking-[0.2em] text-netral-300">Tiga langkah</span>
+        <div class="flex items-baseline justify-between gap-6 border-b border-netral-200 dark:border-arang-600 pb-5">
+            <h2 class="font-display text-judul font-semibold text-netral-900 dark:text-netral-100">Cara kerjanya</h2>
+            <span class="text-label uppercase tracking-[0.2em] text-netral-500 dark:text-netral-400">Tiga langkah</span>
         </div>
 
         @php
@@ -220,7 +251,7 @@
             ];
         @endphp
 
-        <div class="divide-y divide-arang-base">
+        <div class="divide-y divide-netral-200 dark:divide-arang-600">
             @foreach ($langkah as $i => $baris)
                 <article data-muncul style="--tunda: {{ $i * 100 }}ms"
                          class="grid gap-4 py-10 sm:grid-cols-12 sm:gap-8">
@@ -228,11 +259,11 @@
                         {{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}
                     </p>
 
-                    <h3 class="font-display text-xl font-semibold text-netral-100 sm:col-span-4">
+                    <h3 class="font-display text-xl font-semibold text-netral-900 dark:text-netral-100 sm:col-span-4">
                         {{ $baris['judul'] }}
                     </h3>
 
-                    <p class="max-w-xl text-sm leading-relaxed text-netral-300 sm:col-span-6">
+                    <p class="max-w-xl text-sm leading-relaxed text-netral-600 dark:text-netral-400 sm:col-span-6">
                         {{ $baris['isi'] }}
                     </p>
                 </article>
@@ -243,47 +274,47 @@
     {{-- =================================================================
          PROGRAM STUDI
          ================================================================= --}}
-    <section class="border-y border-arang-base bg-arang-deep/50">
+    <section class="border-y border-netral-200 dark:border-arang-600 bg-white/40 dark:bg-arang-700/50 transition-colors">
         <div class="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
             <div class="grid gap-12 lg:grid-cols-12 lg:gap-8">
 
                 <div class="lg:col-span-4">
-                    <h2 class="font-display text-judul font-semibold leading-tight text-netral-100">
+                    <h2 class="font-display text-judul font-semibold leading-tight text-netral-900 dark:text-netral-100">
                         Program studi yang tersedia
                     </h2>
 
-                    <p class="mt-5 max-w-sm text-sm leading-relaxed text-netral-300">
-                        Koleksi bertanda <strong class="font-semibold text-netral-100">Umum</strong> dapat dibaca
+                    <p class="mt-5 max-w-sm text-sm leading-relaxed text-netral-600 dark:text-netral-400">
+                        Koleksi bertanda <strong class="font-semibold text-netral-900 dark:text-netral-100">Umum</strong> dapat dibaca
                         mahasiswa dari seluruh program studi.
                     </p>
 
-                    <p class="mt-8 font-display text-besar font-semibold leading-none text-sienna-light">
+                    <p class="mt-8 font-display text-besar font-semibold leading-none text-jingga-600 dark:text-jingga-400">
                         {{ str_pad($daftarProdi->count(), 2, '0', STR_PAD_LEFT) }}
                     </p>
-                    <p class="mt-1 text-label uppercase tracking-[0.2em] text-netral-300">
+                    <p class="mt-1 text-label uppercase tracking-[0.2em] text-netral-500 dark:text-netral-400">
                         Program studi terdaftar
                     </p>
                 </div>
 
                 <div class="lg:col-span-8">
-                    <ol class="divide-y divide-arang-base border-y border-arang-base">
+                    <ol class="divide-y divide-netral-200 dark:divide-arang-600 border-y border-netral-200 dark:border-arang-600">
                         @forelse ($daftarProdi as $i => $prodi)
                             <li data-muncul style="--tunda: {{ min($i, 8) * 60 }}ms"
                                 class="flex items-baseline gap-5 py-5">
-                                <span class="w-8 shrink-0 font-display text-sm font-semibold text-netral-300">
+                                <span class="w-8 shrink-0 font-display text-sm font-semibold text-netral-500 dark:text-netral-400">
                                     {{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}
                                 </span>
 
-                                <span class="flex-1 font-display text-lg font-semibold text-netral-100">
+                                <span class="flex-1 font-display text-lg font-semibold text-netral-900 dark:text-netral-100">
                                     {{ $prodi->name }}
                                 </span>
 
-                                <span class="text-label uppercase tracking-[0.18em] text-netral-300">
+                                <span class="text-label uppercase tracking-[0.18em] text-netral-500 dark:text-netral-400">
                                     {{ $prodi->slug }}
                                 </span>
                             </li>
                         @empty
-                            <li class="py-8 text-sm text-netral-300">Belum ada program studi terdaftar.</li>
+                            <li class="py-8 text-sm text-netral-500 dark:text-netral-400">Belum ada program studi terdaftar.</li>
                         @endforelse
                     </ol>
                 </div>
@@ -294,20 +325,20 @@
     {{-- =================================================================
          AJAKAN PENUTUP
          ================================================================= --}}
-    <section class="tekstur-kertas bg-arang-deepest/50">
+    <section class="tekstur-kertas bg-netral-100/60 dark:bg-arang-900/50 transition-colors">
         <div class="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
             <div data-muncul class="max-w-3xl">
-                <h2 class="judul-raksasa font-display font-semibold leading-[0.95] text-netral-100">
+                <h2 class="judul-raksasa font-display font-semibold leading-[0.95] text-netral-900 dark:text-netral-100">
                     Mulai membaca hari ini.
                 </h2>
 
                 <div class="mt-10 flex flex-wrap items-center gap-6">
                     <a href="{{ route('register') }}"
-                       class="bg-sienna px-7 py-4 text-sm font-semibold text-white transition-colors duration-200 hover:bg-sienna-dark rounded btn-press">
+                       class="bg-jingga-600 px-7 py-4 text-sm font-semibold text-white transition-colors duration-200 hover:bg-jingga-700 rounded btn-press shadow-sm">
                         Buat akun mahasiswa
                     </a>
                     <a href="{{ route('login') }}"
-                       class="sapu-bawah text-sm font-semibold text-netral-200">
+                       class="sapu-bawah text-sm font-semibold text-netral-700 dark:text-netral-200">
                         Masuk ke akun yang sudah ada
                     </a>
                 </div>
@@ -315,7 +346,7 @@
         </div>
     </section>
 
-    <footer class="border-t border-arang-base bg-arang-deepest text-netral-300">
+    <footer class="border-t border-netral-200 dark:border-arang-600 bg-white/80 dark:bg-arang-900 text-netral-600 dark:text-netral-400 transition-colors">
         <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-8 text-label uppercase tracking-[0.18em] lg:px-10">
             <p>Pustaka Dosen &middot; Perpustakaan digital dosen pengampu</p>
             <p>Akses terbatas untuk mahasiswa terdaftar</p>

@@ -1,10 +1,10 @@
 <section class="space-y-6">
     <header>
-        <h2 class="text-lg font-medium text-kabut-50">
+        <h2 class="text-lg font-medium text-netral-900 dark:text-netral-50">
             Hapus Akun
         </h2>
 
-        <p class="mt-1 text-sm text-kabut-400">
+        <p class="mt-1 text-sm text-netral-500 dark:text-netral-400">
             Setelah akun Anda dihapus, semua sumber daya dan datanya akan dihapus permanen. Sebelum menghapus akun, unduh data atau informasi yang ingin Anda simpan terlebih dahulu.
         </p>
     </header>
@@ -19,11 +19,11 @@
             @csrf
             @method('delete')
 
-            <h2 class="text-lg font-medium text-kabut-50">
+            <h2 class="text-lg font-medium text-netral-900 dark:text-netral-50">
                 Apakah Anda yakin ingin menghapus akun?
             </h2>
 
-            <p class="mt-1 text-sm text-kabut-400">
+            <p class="mt-1 text-sm text-netral-500 dark:text-netral-400">
                 Setelah akun Anda dihapus, semua sumber daya dan datanya akan dihapus permanen. Masukkan kata sandi untuk mengonfirmasi penghapusan permanen akun ini.
             </p>
 

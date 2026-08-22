@@ -5,12 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name', 'Pustaka Dosen') }}</title>
 
+    {{-- Script pencegah kedipan tema (FOUC) saat halaman dimuat --}}
+    <script>
+        (function() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'dark' || (!saved && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
     <link rel="manifest" href="/manifest.webmanifest">
-    {{-- Warna bilah status. Harus sama dengan sepia-900 (#0f172a) di
-         tailwind.config.js, welcome.blade.php, layouts/app.blade.php, dan
-         public/manifest.webmanifest. --}}
-    <meta name="theme-color" content="#0B0E14">
+    <meta name="theme-color" content="#101113">
     <link rel="apple-touch-icon" href="/images/icon-192.png">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|playfair-display:400,600,700&display=swap" rel="stylesheet" />
@@ -51,25 +61,46 @@
         }
     </style>
 </head>
-<body class="font-sans antialiased bg-netral-100">
+<body class="font-sans antialiased bg-netral-100 dark:bg-arang-900 transition-colors">
 
     {{-- Layout utama: form kiri + branding kanan --}}
     <div class="min-h-screen lg:flex">
 
         {{-- === PANEL KIRI: FORM (~40%) === --}}
-        <main class="flex w-full flex-col justify-center bg-arang-deepest px-8 py-14 lg:w-[42%] lg:min-h-screen lg:px-14 xl:px-20">
+        <main class="flex w-full flex-col justify-center bg-white dark:bg-arang-900 px-8 py-14 lg:w-[42%] lg:min-h-screen lg:px-14 xl:px-20 border-r border-netral-200 dark:border-arang-600 transition-colors">
 
-            {{-- Logo — selalu tampil --}}
-            <a href="{{ url('/') }}" class="anim-fade-up mb-12 flex items-center gap-3 self-start">
-                <img src="{{ asset('images/logo.svg') }}" alt="" class="h-9 w-9">
-                <span class="font-display text-base font-semibold tracking-tight text-netral-100">Pustaka Dosen</span>
-            </a>
+            {{-- Header Form & Theme Switcher --}}
+            <div class="flex items-center justify-between mb-12">
+                {{-- Logo — selalu tampil --}}
+                <a href="{{ url('/') }}" class="anim-fade-up flex items-center gap-3 self-start">
+                    <img src="{{ asset('images/logo.svg') }}" alt="" class="h-9 w-9">
+                    <span class="font-display text-base font-semibold tracking-tight text-netral-900 dark:text-netral-100">Pustaka Dosen</span>
+                </a>
+
+                {{-- Mode Switcher di Guest Layout --}}
+                <div x-data>
+                    <button @click="$store.theme.setMode($store.theme.mode === 'dark' ? 'light' : ($store.theme.mode === 'light' ? 'system' : 'dark'))"
+                            type="button"
+                            :title="'Mode: ' + $store.theme.mode"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-netral-200 dark:border-arang-600 bg-netral-50 dark:bg-arang-800 text-netral-600 dark:text-netral-300 transition hover:text-jingga-600 dark:hover:text-jingga-400">
+                        <svg x-show="$store.theme.mode === 'light'" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <svg x-show="$store.theme.mode === 'dark'" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                        <svg x-show="$store.theme.mode === 'system'" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2-0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
 
             {{-- Heading form --}}
             <div class="anim-fade-up anim-delay-1 mb-8">
                 <span class="divider-editorial mb-5"></span>
-                <h2 class="font-display text-3xl font-semibold leading-tight text-netral-100">Masuk ke<br>Akun Anda</h2>
-                <p class="mt-3 text-sm leading-relaxed text-netral-300">Akses koleksi e-book dan materi kuliah yang disusun dosen pengampu.</p>
+                <h2 class="font-display text-3xl font-semibold leading-tight text-netral-900 dark:text-netral-100">Masuk ke<br>Akun Anda</h2>
+                <p class="mt-3 text-sm leading-relaxed text-netral-500 dark:text-netral-300">Akses koleksi e-book dan materi kuliah yang disusun dosen pengampu.</p>
             </div>
 
             {{-- Form slot --}}
@@ -78,13 +109,13 @@
             </div>
 
             {{-- Footer form --}}
-            <p class="anim-fade-up anim-delay-3 mt-10 text-xs text-netral-300">
+            <p class="anim-fade-up anim-delay-3 mt-10 text-xs text-netral-500 dark:text-netral-300">
                 &copy; {{ date('Y') }} Pustaka Dosen &mdash; Koleksi pribadi dosen, akses mahasiswa terdaftar.
             </p>
         </main>
 
         {{-- === PANEL KANAN: BRANDING + LATAR PARTIKEL (~60%) === --}}
-        <aside class="relative hidden overflow-hidden bg-arang-deep lg:flex lg:w-[58%]" aria-hidden="true">
+        <aside class="relative hidden overflow-hidden bg-arang-800 dark:bg-arang-900 lg:flex lg:w-[58%]" aria-hidden="true">
 
             {{-- Canvas latar — full panel --}}
             <canvas id="particles-canvas" class="absolute inset-0 z-0 h-full w-full"></canvas>
@@ -93,7 +124,7 @@
             <div class="relative z-10 flex h-full flex-col justify-between px-14 py-14 xl:px-20">
 
                 {{-- Label overline atas --}}
-                <p class="text-label font-semibold uppercase tracking-[0.22em] text-sienna-light">
+                <p class="text-label font-semibold uppercase tracking-[0.22em] text-jingga-400">
                     Perpustakaan Digital
                 </p>
 
@@ -101,7 +132,7 @@
                 <div class="max-w-2xl">
                     <h1 class="headline-raksasa font-display text-netral-100">
                         Bahan<br>
-                        <em class="not-italic text-sienna-light">bacaan</em><br>
+                        <em class="not-italic text-jingga-400">bacaan</em><br>
                         kuliah,<br>
                         disusun<br>
                         dosen.
@@ -149,7 +180,7 @@
         if (!konteks) return;
 
         const JUMLAH = 280;
-        const WARNA = ['#2A2E3A', '#B85C38', '#1A1D26']; // arang-base, sienna, arang-deep
+        const WARNA = ['#2A2E3A', '#B85C38', '#1A1D26']; // arang-600, jingga-600, arang-700
         const OPASITAS = 0.18;
 
         let lebar = 0;

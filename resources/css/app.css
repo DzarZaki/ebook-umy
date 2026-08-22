@@ -4,7 +4,7 @@
 
 @layer base {
     body {
-        @apply bg-arang-deepest text-netral-100;
+        @apply bg-netral-100 text-netral-900 dark:bg-arang-900 dark:text-netral-100 transition-colors duration-200;
     }
 
     h1, h2, h3, h4 {
@@ -266,8 +266,12 @@
    Ini yang membuat halaman terbaca sebagai indeks, bukan sebagai grid. */
 .angka-tepi {
     color: transparent;
-    -webkit-text-stroke: 1px #B85C38;
+    -webkit-text-stroke: 1px #B34E28;
     -webkit-text-fill-color: transparent;
+}
+
+.dark .angka-tepi {
+    -webkit-text-stroke: 1px #E06A3B;
 }
 
 /* Garis bawah yang menyapu dari kiri, bukan yang menyala tiba-tiba */
@@ -381,29 +385,45 @@
 
 /*
 	Keping penanda di dalam panel dibuat oleh JS (baris 469–475), jadi
-	bentuknya hanya bisa ditentukan dari sini. Kelas bg-kabut-100 yang
+	bentuknya hanya bisa ditentukan dari sini. Kelas bg-netral-100 yang
 	dipasang JS pada penanda halaman aktif sengaja tidak diganggu.
 */
 #daftar-penanda button {
 	cursor: pointer;
-	border: 1px solid #2A2E3A;
+	border: 1px solid #E1E0DD;
 	padding: 0.375rem 0.75rem;
 	font-size: 0.75rem;
 	font-weight: 500;
-	color: #9B9893;
-	background-color: #1A1D26;
+	color: #606063;
+	background-color: #FAF9F8;
 	transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
 
+.dark #daftar-penanda button {
+	border-color: #282A30;
+	color: #A1A1AA;
+	background-color: #191A1E;
+}
+
 #daftar-penanda button:hover {
-	border-color: #B85C38;
-	background-color: #2A2E3A;
-	color: #E8E6E3;
+	border-color: #B34E28;
+	background-color: #F4F4F3;
+	color: #141415;
+}
+
+.dark #daftar-penanda button:hover {
+	border-color: #E06A3B;
+	background-color: #282A30;
+	color: #FAF9F8;
 }
 
 #daftar-penanda button:focus-visible {
-	outline: 2px solid #B85C38;
+	outline: 2px solid #B34E28;
 	outline-offset: 2px;
+}
+
+.dark #daftar-penanda button:focus-visible {
+	outline-color: #E06A3B;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -762,18 +782,11 @@
 }
 
 /* =====================================================================
-   FASE 3.7 — LANGKAH 90: DASAR KERTAS
+   FASE 3.7 — LANGKAH 90: DASAR KERTAS & SUASANA (LIGHT & DARK DUALITY)
 
-   Satu bidang bahan untuk seluruh situs, menggantikan pita putih-krem
-   yang berselang-seling.
-
-   Dua lapis, keduanya position: fixed sehingga tidak ikut menggulir —
-   halaman terasa bergerak DI ATAS kertas, bukan membawa kertasnya.
-     body::before  gradasi hangat + dua cahaya lembut di sudut
-     body::after   butiran kertas, digambar SVG, tanpa berkas gambar
-
-   Keduanya diberi z-index negatif, jadi berada di belakang seluruh isi
-   halaman dan tidak pernah menghalangi klik.
+   Satu bidang bahan untuk seluruh situs.
+   Mode Terang: Studio mineral hangat dengan aksen amber tinta.
+   Mode Gelap: Obsidian monokrom dengan butiran arang halus.
    ===================================================================== */
 
 body::before {
@@ -783,8 +796,15 @@ body::before {
 	z-index: -2;
 	pointer-events: none;
 	background:
-		radial-gradient(900px 620px at 82% -12%, rgba(184, 92, 56, 0.04), transparent 68%),
-		linear-gradient(178deg, #0B0E14 0%, #0F1218 42%, #08090E 100%);
+		radial-gradient(900px 620px at 82% -12%, rgba(179, 78, 40, 0.05), transparent 68%),
+		linear-gradient(178deg, #FAF9F8 0%, #F4F4F3 42%, #ECEAE6 100%);
+	transition: opacity 0.3s ease;
+}
+
+.dark body::before {
+	background:
+		radial-gradient(900px 620px at 82% -12%, rgba(224, 106, 59, 0.05), transparent 68%),
+		linear-gradient(178deg, #101113 0%, #131417 42%, #0A0B0D 100%);
 }
 
 body::after {
@@ -793,18 +813,17 @@ body::after {
 	inset: 0;
 	z-index: -1;
 	pointer-events: none;
-	opacity: 0.28;
+	opacity: 0.15;
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23b)' opacity='0.4'/%3E%3C/svg%3E");
 	background-size: 220px 220px;
 }
 
-/* ---------------------------------------------------------------------
-   Pita hening — pengganti section berwarna
+.dark body::after {
+	opacity: 0.28;
+}
 
-   Bagian halaman tidak lagi dibedakan dengan blok warna, melainkan
-   dengan garis rambut di antaranya. Dua pita bersebelahan otomatis
-   mendapat garis; pita pertama tidak, supaya tidak ada garis menggantung
-   tepat di bawah bilah navigasi.
+/* ---------------------------------------------------------------------
+   Pita hening — pemisah bagian halaman
    --------------------------------------------------------------------- */
 
 .pita {
@@ -822,46 +841,74 @@ body::after {
 	transform: translateX(-50%);
 	background: linear-gradient(
 		to right,
-		rgba(42, 46, 58, 0) 0%,
-		rgba(42, 46, 58, 0.5) 12%,
-		rgba(42, 46, 58, 0.5) 88%,
-		rgba(42, 46, 58, 0) 100%
+		rgba(225, 224, 221, 0) 0%,
+		rgba(225, 224, 221, 0.9) 12%,
+		rgba(225, 224, 221, 0.9) 88%,
+		rgba(225, 224, 221, 0) 100%
 	);
 }
 
-/* Pita yang sesekali perlu sedikit lebih terang dari dasarnya — dipakai
-   hemat, satu atau dua kali per halaman, bukan berselang-seling. */
+.dark .pita + .pita::before {
+	background: linear-gradient(
+		to right,
+		rgba(40, 42, 48, 0) 0%,
+		rgba(40, 42, 48, 0.8) 12%,
+		rgba(40, 42, 48, 0.8) 88%,
+		rgba(40, 42, 48, 0) 100%
+	);
+}
+
 .pita--terang {
-	background-color: rgba(26, 29, 38, 0.6);
+	background-color: rgba(255, 255, 255, 0.6);
+}
+
+.dark .pita--terang {
+	background-color: rgba(25, 26, 30, 0.6);
 }
 
 /* ---------------------------------------------------------------------
    Kartu kertas
-
-   Putih pekat membuat kartu tampak seperti tempelan. Lapisan tembus
-   pandang membiarkan butiran dasar terlihat samar menembusnya, sehingga
-   kartu terasa bagian dari bahan yang sama.
    --------------------------------------------------------------------- */
 
 .kartu-kertas {
-	background-color: rgba(255, 253, 250, 0.78);
-	border: 1px solid rgba(90, 68, 48, 0.1);
+	background-color: rgba(255, 255, 255, 0.9);
+	border: 1px solid rgba(225, 220, 215, 0.8);
 	box-shadow:
-		0 1px 2px rgba(37, 27, 18, 0.04),
-		0 18px 32px -26px rgba(37, 27, 18, 0.45);
+		0 1px 3px rgba(0, 0, 0, 0.03),
+		0 10px 24px -14px rgba(0, 0, 0, 0.08);
 	transition: box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1),
-		transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+		transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+		background-color 200ms ease,
+		border-color 200ms ease;
+}
+
+.dark .kartu-kertas {
+	background-color: rgba(25, 26, 30, 0.82);
+	border: 1px solid rgba(40, 42, 48, 0.9);
+	box-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.3),
+		0 18px 32px -26px rgba(0, 0, 0, 0.7);
 }
 
 .kartu-kertas:hover {
 	box-shadow:
-		0 1px 2px rgba(37, 27, 18, 0.05),
-		0 26px 44px -28px rgba(37, 27, 18, 0.55);
+		0 2px 6px rgba(0, 0, 0, 0.05),
+		0 18px 36px -16px rgba(0, 0, 0, 0.12);
 }
 
-/* Garis rambut serba guna, border hairline. */
+.dark .kartu-kertas:hover {
+	box-shadow:
+		0 2px 6px rgba(0, 0, 0, 0.4),
+		0 26px 44px -28px rgba(0, 0, 0, 0.9);
+}
+
+/* Garis rambut serba guna, border hairline */
 .garis-tinta {
-	border-color: #2A2E3A;
+	border-color: #E1E0DD;
+}
+
+.dark .garis-tinta {
+	border-color: #282A30;
 }
 
 /* Kertas tidak perlu dicetak di atas kertas. */

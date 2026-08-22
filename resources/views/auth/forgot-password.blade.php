@@ -1,5 +1,5 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-kabut-600">
+    <div class="mb-4 text-sm text-arang-600">
         Lupa kata sandi? Tidak masalah. Masukkan alamat surel Anda dan kami akan mengirimkan tautan pengaturan ulang kata sandi.
     </div>
 

@@ -38,7 +38,7 @@
         <button
             type="submit"
             title="{{ $label }}"
-            class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white ring-1 ring-kabut-200 transition-colors duration-150 hover:ring-kabut-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none sm:h-9 sm:w-9 {{ $sudah ? 'text-jingga-600 hover:text-jingga-700' : 'text-kabut-400 hover:text-kabut-700' }}"
+            class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white dark:bg-arang-800 ring-1 ring-netral-200 dark:ring-arang-600 shadow-sm transition-colors duration-150 hover:ring-netral-400 dark:hover:ring-arang-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none sm:h-9 sm:w-9 {{ $sudah ? 'text-jingga-600 dark:text-jingga-400 hover:text-jingga-700' : 'text-netral-600 dark:text-netral-300 hover:text-netral-900 dark:hover:text-netral-100' }}"
         >
             <svg class="h-5 w-5" viewBox="0 0 20 20" aria-hidden="true"
                  fill="{{ $sudah ? 'currentColor' : 'none' }}"
@@ -54,8 +54,8 @@
             type="submit"
             title="{{ $label }}"
             class="inline-flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-sm font-semibold transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none {{ $sudah
-                ? 'border-jingga-200 bg-jingga-50 text-jingga-800 hover:border-jingga-300 hover:bg-jingga-100'
-                : 'border-kabut-300 bg-white text-kabut-700 hover:border-kabut-400 hover:bg-kabut-50' }}"
+                ? 'border-jingga-200 dark:border-jingga-700/70 bg-jingga-50 dark:bg-arang-800 text-jingga-800 dark:text-jingga-400 hover:border-jingga-300 dark:hover:border-jingga-600'
+                : 'border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700 text-netral-700 dark:text-netral-200 hover:bg-netral-50 dark:hover:bg-arang-600' }}"
         >
             <svg class="h-4 w-4" viewBox="0 0 20 20" aria-hidden="true"
                  fill="{{ $sudah ? 'currentColor' : 'none' }}"

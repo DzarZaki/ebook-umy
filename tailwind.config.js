@@ -3,7 +3,8 @@ import forms from '@tailwindcss/forms';
 
 /** @type {import('tailwindcss').Config} */
 export default {
-        content: [
+    darkMode: 'class',
+    content: [
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
@@ -18,27 +19,45 @@ export default {
             },
 
             colors: {
-                // Burnt sienna — aksen tunggal untuk aksi dan penekanan.
-                // Hangat seperti kulit buku dan tinta lama, bukan oranye AI.
-                sienna: {
-                    light: '#D97556',   // lencana, state disabled
-                    DEFAULT: '#B85C38', // tombol, tautan, aksen utama
-                    dark: '#934A2D',    // hover, pressed
+                // Amber Lentera — Aksen Jingga Editorial (Pilihan 3)
+                // Hangat, presisi arsitektural, berbobot untuk teks di mode terang dan berpendar lembut di mode gelap.
+                jingga: {
+                    50: '#FDF7F4',      // bg highlight sangat lembut
+                    100: '#FBF0EB',     // bg badge / surface tint terang
+                    200: '#F6DDD2',     // border aksen terang
+                    300: '#EEBAA6',     // aksen medium-light
+                    400: '#E06A3B',     // primer di mode gelap (amber lentera pendar)
+                    500: '#CC562A',     // medium dark
+                    600: '#B34E28',     // DEFAULT / primer di mode terang (tinta amber pekat)
+                    700: '#943F1F',     // hover / active mode terang
+                    800: '#753118',     // deep tone
+                    900: '#522210',     // deepest tone
                 },
-                // Charcoal-navy — dasar gelap dengan sedikit kehangatan.
-                // Bukan hitam murni, bukan ungu-biru AI.
+                // Monokrom Arsitektural / Obsidian Grafit (Dasar Gelap)
                 arang: {
-                    deepest: '#0B0E14', // body background
-                    deep: '#1A1D26',    // card, panel
-                    base: '#2A2E3A',    // border, divider
+                    50: '#F4F4F5',      // abu terang netral
+                    100: '#E4E4E7',     // pemisah / teks terang
+                    200: '#D4D4D8',     // border terang
+                    300: '#A1A1AA',     // teks redup mode gelap
+                    400: '#71717A',     // teks muted
+                    500: '#52525B',     // pembatas sekunder
+                    600: '#282A30',     // garis pemisah / border mode gelap
+                    700: '#191A1E',     // kartu / surface mode gelap
+                    800: '#131417',     // footer / nav / panel sekunder mode gelap
+                    900: '#101113',     // kanvas latar utama mode gelap (obsidian monokrom)
                 },
-                // Neutral warm — teks dan surface dengan sedikit kehangatan.
+                // Studio Mineral / Warm Paper Netral (Dasar Terang & Teks)
                 netral: {
-                    100: '#E8E6E3',     // text primary
-                    200: '#C8C5C0',     // text secondary (medium emphasis)
-                    300: '#9B9893',     // text tertiary (low emphasis)
-                    400: '#6B6863',     // text disabled, subtle labels
-                    500: '#4A4744',     // borders, very subtle elements
+                    50: '#FAF9F8',      // kartu / permukaan paling terang
+                    100: '#F4F4F3',     // kanvas latar utama mode terang (studio mineral)
+                    200: '#E1E0DD',     // garis batas / border halus mode terang
+                    300: '#B5B4B0',     // border medium / ikon muted
+                    400: '#919194',     // teks sekunder mode gelap
+                    500: '#606063',     // teks sekunder mode terang
+                    600: '#424245',     // teks subjudul mode terang
+                    700: '#2B2B2D',     // teks judul mode terang
+                    800: '#1C1C1E',     // teks utama sangat pekat
+                    900: '#141415',     // teks utama mode terang / hitam tinta cetak
                 },
             },
 

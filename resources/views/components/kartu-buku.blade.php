@@ -45,7 +45,7 @@
     Tiga keputusan yang membedakannya dari blok lama:
 
     1. TANPA BAYANGAN. Pada gaya kertas, kartu dipisahkan garis rambut
-       (border-kabut-200), bukan bayangan. Kertas tidak melayang.
+       (border-netral-200), bukan bayangan. Kertas tidak melayang.
     2. h-full DAN flex-1. Kartu mengisi penuh tinggi selnya di grid, dan
        badan kartu memuai; akibatnya semua kartu dalam satu baris berujung
        rata meskipun panjang judulnya berbeda.
@@ -54,7 +54,7 @@
        tidak perlu tahu apa pun soal tata letak — itulah sebabnya pita kemarin
        jatuh ke barisnya sendiri.
 --}}
-<div {{ $attributes->merge(['class' => 'group relative flex h-full flex-col overflow-hidden rounded-lg border border-kabut-200 bg-white transition duration-200 hover:border-kabut-300 motion-reduce:transition-none']) }}>
+<div {{ $attributes->merge(['class' => 'group relative flex h-full flex-col overflow-hidden rounded-lg border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700 transition duration-200 hover:border-netral-300 dark:hover:border-arang-500 shadow-sm dark:shadow-none motion-reduce:transition-none']) }}>
 
     {{-- ===== Sampul ===== --}}
     {{--
@@ -66,7 +66,7 @@
     <a href="{{ $alamat }}"
        aria-hidden="true"
        tabindex="-1"
-       class="block aspect-[3/4] w-full overflow-hidden bg-kabut-100">
+       class="block aspect-[3/4] w-full overflow-hidden bg-netral-100 dark:bg-arang-800">
         @if ($buku->coverUrl())
             {{-- object-cover, bukan object-contain: sampul memenuhi kotaknya
                  tanpa bingkai abu-abu di kiri-kanan. Sedikit terpotong lebih
@@ -78,7 +78,7 @@
         @else
             {{-- Buku tanpa sampul: kotak inisial setinggi penuh, memusat,
                  sehingga tingginya sama dengan kartu bersampul. --}}
-            <span class="flex h-full w-full items-center justify-center bg-sepia-100 font-display text-4xl font-semibold text-sepia-800">
+            <span class="flex h-full w-full items-center justify-center bg-netral-100 dark:bg-arang-800 font-display text-4xl font-semibold text-netral-700 dark:text-netral-200">
                 {{ $buku->inisial() }}
             </span>
         @endif
@@ -86,7 +86,7 @@
 
     {{-- Lencana di kiri atas, misalnya "Baru". --}}
     @if ($lencana)
-        <span class="absolute left-2 top-2 z-10 rounded border border-jingga-200 bg-jingga-50 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-jingga-800">
+        <span class="absolute left-2 top-2 z-10 rounded border border-jingga-200 dark:border-jingga-700/60 bg-jingga-50/90 dark:bg-arang-800/90 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-jingga-800 dark:text-jingga-400">
             {{ $lencana }}
         </span>
     @endif
@@ -100,35 +100,35 @@
     @endif
 
     {{-- ===== Badan kartu ===== --}}
-    <div class="flex flex-1 flex-col gap-1 border-t border-kabut-200 p-3">
+    <div class="flex flex-1 flex-col gap-1 border-t border-netral-200 dark:border-arang-600 p-3">
 
         {{-- Lencana prodi & kategori. --}}
         @if ($label)
             <div class="mb-1 flex flex-wrap gap-1.5">
-                <span class="rounded border border-kabut-200 bg-kabut-50 px-1.5 py-0.5 text-[11px] text-kabut-600">
+                <span class="rounded border border-netral-200 dark:border-arang-600 bg-netral-50 dark:bg-arang-800 px-1.5 py-0.5 text-[11px] text-netral-600 dark:text-netral-300">
                     {{ $namaProdi }}
                 </span>
 
                 @if ($buku->category)
-                    <span class="rounded border border-sepia-200 bg-sepia-50 px-1.5 py-0.5 text-[11px] text-sepia-800">
+                    <span class="rounded border border-netral-200 dark:border-arang-600 bg-netral-50 dark:bg-arang-800 px-1.5 py-0.5 text-[11px] text-netral-700 dark:text-netral-200">
                         {{ $buku->category->name }}
                     </span>
                 @endif
             </div>
         @endif
 
-        <h3 class="font-display text-sm font-semibold leading-snug text-sepia-800">
+        <h3 class="font-display text-sm font-semibold leading-snug text-netral-900 dark:text-netral-100">
             <a href="{{ $alamat }}"
-               class="cursor-pointer transition-colors duration-150 hover:text-jingga-700 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
+               class="cursor-pointer transition-colors duration-150 hover:text-jingga-600 dark:hover:text-jingga-400 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
                 {{ $buku->title }}
             </a>
         </h3>
 
-        <p class="text-xs text-kabut-500">{{ $buku->author ?: 'Tanpa penulis' }}</p>
+        <p class="text-xs text-netral-500 dark:text-netral-400">{{ $buku->author ?: 'Tanpa penulis' }}</p>
 
         {{-- mt-auto mendorong keterangan ini ke dasar kartu, sehingga
              seluruh kartu dalam satu baris punya garis dasar yang sama. --}}
-        <p class="mt-auto pt-2 text-[11px] text-kabut-500">
+        <p class="mt-auto pt-2 text-[11px] text-netral-500 dark:text-netral-400">
             {{ $buku->labelAkses() }}
         </p>
 
@@ -137,16 +137,16 @@
             <div class="pt-2">
                 {{-- Bilah selalu tampak minimal 2% agar kemajuan yang baru
                      sedikit tetap terlihat sebagai garis, bukan hilang. --}}
-                <div class="h-1 w-full overflow-hidden rounded-full bg-kabut-200"
+                <div class="h-1 w-full overflow-hidden rounded-full bg-netral-200 dark:bg-arang-600"
                      role="progressbar"
                      aria-valuenow="{{ $persen }}"
                      aria-valuemin="0"
                      aria-valuemax="100"
                      aria-label="Kemajuan membaca {{ $buku->title }}">
-                    <div class="h-full rounded-full bg-jingga-600" style="width: {{ max(2, $persen) }}%"></div>
+                    <div class="h-full rounded-full bg-jingga-600 dark:bg-jingga-500" style="width: {{ max(2, $persen) }}%"></div>
                 </div>
 
-                <p class="mt-1.5 text-[11px] text-kabut-500">
+                <p class="mt-1.5 text-[11px] text-netral-500 dark:text-netral-400">
                     Halaman {{ $halaman }}@if ($totalHalaman) dari {{ $totalHalaman }}@endif
                     @if ($persen >= 1)
                         · {{ $persen }}%
@@ -156,7 +156,7 @@
                 </p>
 
                 <a href="{{ route('katalog.baca', ['buku' => $buku, 'halaman' => $halaman]) }}"
-                   class="mt-2 inline-flex cursor-pointer items-center rounded bg-jingga-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors duration-150 hover:bg-jingga-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
+                   class="mt-2 inline-flex cursor-pointer items-center rounded bg-jingga-600 dark:bg-jingga-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors duration-150 hover:bg-jingga-700 dark:hover:bg-jingga-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2 motion-reduce:transition-none">
                     Lanjutkan
                 </a>
             </div>

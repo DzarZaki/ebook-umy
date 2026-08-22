@@ -5,18 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    {{-- Script pencegah kedipan tema (FOUC) saat halaman dimuat --}}
+    <script>
+        (function() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'dark' || (!saved && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+
     {{-- Judul tab kini bisa diisi per halaman lewat <x-slot name="title">.
          Selama belum diisi, isinya sama seperti sebelumnya. --}}
     <title>{{ isset($title) ? $title.' · '.config('app.name', 'Pustaka Dosen') : config('app.name', 'Pustaka Dosen') }}</title>
 
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
     <link rel="manifest" href="/manifest.webmanifest">
-
-           {{-- Warna bilah aplikasi saat dipasang sebagai PWA: sepia-900 (#0f172a).
-         Nilai ini harus sama di welcome.blade.php, layouts/guest.blade.php,
-         dan public/manifest.webmanifest — kalau berbeda, bilah status ponsel
-         berubah warna saat pengguna berpindah halaman. --}}
-    <meta name="theme-color" content="#0B0E14">
+    <meta name="theme-color" content="#101113">
     <link rel="apple-touch-icon" href="/images/icon-192.png">
 
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -33,7 +41,7 @@
         Lewati ke konten
     </a>
 
-    {{-- Pembungkus ini dulu memakai bg-kabut-50. Warnanya dilepas supaya
+    {{-- Pembungkus ini dulu memakai bg-netral-50. Warnanya dilepas supaya
          dasar kertas (body::before dan body::after, Langkah 90) terlihat
          menembus seluruh tinggi halaman tanpa terputus.
 
@@ -59,8 +67,8 @@
         {{-- Kaki halaman ikut tembus pandang. Sedikit lebih gelap dari dasar
              lewat rgba tipis, cukup untuk menutup halaman tanpa menjadi pita
              warna baru. --}}
-        <footer class="mt-16 border-t garis-tinta bg-sepia-900/80">
-            <div class="mx-auto max-w-7xl px-4 py-8 text-xs text-kabut-500 sm:px-6 lg:px-8">
+        <footer class="mt-16 border-t garis-tinta bg-white/60 dark:bg-arang-800/80 transition-colors">
+            <div class="mx-auto max-w-7xl px-4 py-8 text-xs text-netral-500 sm:px-6 lg:px-8">
                 Pustaka Dosen &middot; Dikelola mandiri oleh dosen pengampu
             </div>
         </footer>
