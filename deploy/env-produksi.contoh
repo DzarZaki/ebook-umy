@@ -1,0 +1,96 @@
+# ===========================================================================
+# Template .env PRODUKSI â€” disalin oleh deploy/1-setup-vps.sh ke .env server
+# ===========================================================================
+# Tanda __NAMA__ diganti otomatis oleh skrip setup. Nilai yang WAJIB diisi
+# tangan Anda sebelum skrip jalan ditandai "WAJIB ISI" â€” skrip akan menolak
+# melanjutkan bila masih ada yang kosong.
+# ===========================================================================
+
+APP_NAME="Pustaka Dosen UMY"
+APP_ENV=production
+APP_DEBUG=false
+# Diganti skrip: https://domain-anda bila DOMAIN diset, http://IP bila tidak.
+APP_URL=__APP_URL__
+
+APP_KEY=
+APP_LOCALE=id
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+APP_MAINTENANCE_DRIVER=file
+
+PHP_CLI_SERVER_WORKERS=4
+
+BCRYPT_ROUNDS=12
+
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=warning
+
+# Produksi memakai MySQL/MariaDB â€” kredensial dibuat otomatis oleh skrip.
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=__DB_DATABASE__
+DB_USERNAME=__DB_USERNAME__
+DB_PASSWORD=__DB_PASSWORD__
+
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=false
+SESSION_PATH=/
+SESSION_DOMAIN=null
+# Cookie aman hanya bila situs berjalan HTTPS â€” skrip mengatur nilainya.
+SESSION_SECURE_COOKIE=__SECURE_COOKIE__
+
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+QUEUE_CONNECTION=database
+
+CACHE_STORE=database
+
+# ---------------------------------------------------------------------------
+# SUREL â€” prasyarat keras: verifikasi email menahan mahasiswa baru.
+#
+# WAJIB ISI sebelum skrip setup dijalankan (skrip akan berhenti bila kosong):
+#   MAIL_USERNAME : alamat Gmail pengirim, mis. pustaka.umy@gmail.com
+#   MAIL_PASSWORD : App Password Gmail (BUKAN sandi biasa) â€” buat lewat
+#                   akun Google > Keamanan > Verifikasi 2 langkah AKTIF >
+#                   Sandi Aplikasi. Panjangnya 16 huruf.
+# ---------------------------------------------------------------------------
+MAIL_MAILER=smtp
+MAIL_SCHEME=null
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=WAJIB_ISI_EMAIL_GMAIL
+MAIL_PASSWORD=WAJIB_ISI_APP_PASSWORD
+MAIL_FROM_ADDRESS="${MAIL_USERNAME}"
+MAIL_FROM_NAME="${APP_NAME}"
+
+VITE_APP_NAME="${APP_NAME}"
+
+# Hanya untuk development â€” biarkan kosong di production.
+SEED_PASSWORD=
+
+# Proksi tepercaya. '*' cukup selama satu-satunya proksi di depan aplikasi
+# adalah nginx di server ini sendiri / Cloudflare. Ketatkan ke CIDR bila
+# topologinya sudah pasti.
+TRUSTED_PROXIES=*
+
+# ---------------------------------------------------------------------------
+# Peralatan pengolah PDF â€” qpdf dipasang otomatis oleh skrip setup.
+# ---------------------------------------------------------------------------
+QPDF_BINARY=qpdf
+QPDF_TIMEOUT=60
+EBOOK_QPDF_WAJIB=true
+
+EBOOK_TEMP_DISK=local
+EBOOK_TEMP_TTL=30
+EBOOK_DOWNLOAD_PER_HOUR=20
+EBOOK_READ_PER_MINUTE=30
+EBOOK_BACA_STEMPEL=true
+EBOOK_BACA_IKUTI_RENTANG=false
+EBOOK_BACA_TTL=120
+
+EBOOK_TRASH_DAYS=30
