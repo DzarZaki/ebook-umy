@@ -21,7 +21,7 @@ class RegisteredUserController extends Controller
         return view('auth.register');
     }
 
-    /** Menyimpan akun mahasiswa baru lalu langsung memasukkannya ke aplikasi. */
+    /** Menyimpan akun mahasiswa baru lalu mengirim tautan verifikasi surel. */
     public function store(RegisterRequest $request): RedirectResponse
     {
         $data = $request->validated();
@@ -36,15 +36,21 @@ class RegisteredUserController extends Controller
             'role' => User::ROLE_MAHASISWA,
             'prodi_id' => $prodi->id,
             'is_active' => true,
-            'email_verified_at' => now(),
         ]);
 
+        // Pendengar bawaan Registered mengirim tautan verifikasi karena
+        // model User mengimplementasikan MustVerifyEmail.
         event(new Registered($user));
 
         Auth::login($user);
 
+        // Sama seperti jalur masuk: ID sesi baru setelah otentikasi,
+        // supaya perpindahan tamu → masuk tidak bisa dipatok pihak lain
+        // (session fixation).
+        $request->session()->regenerate();
+
         return redirect()
-            ->route('katalog.index')
-            ->with('status', 'Pendaftaran berhasil. Selamat membaca, '.$user->name.'.');
+            ->route('verification.notice')
+            ->with('status', 'Pendaftaran berhasil. Tautan verifikasi telah dikirim ke '.$user->email.'.');
     }
 }

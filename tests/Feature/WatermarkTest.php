@@ -8,6 +8,7 @@ use App\Models\Book;
 use App\Models\Prodi;
 use App\Models\User;
 use App\Support\Pdf\PembuatStempel;
+use App\Support\Pdf\PengekstrakTeks;
 use App\Support\Pdf\Qpdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -35,12 +36,14 @@ class WatermarkTest extends TestCase
 
         // Watermark kaki dulu ditempel oleh browser, sehingga bisa dimatikan
         // siapa pun lewat DevTools. Kehadiran atribut ini kembali berarti
-        // cara lama yang palsu itu dihidupkan lagi.
+        // cara lama yang palsu itu dihidupkan lagi. Pemeriksaan kedua memakai
+        // tanda "=" agar tidak salah menangkap atribut baru milik fitur
+        // catatan (data-url-catatan-*), yang kebetulan berawalan sama.
         $this->actingAs($mahasiswa)
             ->get(route('katalog.baca', $buku))
             ->assertOk()
             ->assertDontSee('data-watermark-kaki', false)
-            ->assertDontSee('data-url-catat', false);
+            ->assertDontSee('data-url-catat=', false);
     }
 
     public function test_halaman_baca_tanpa_watermark_juga_tidak_membawa_watermark_kaki(): void
@@ -123,6 +126,28 @@ class WatermarkTest extends TestCase
         $this->assertStringContainsString('Ahmad Nugroho', $teks);
         $this->assertStringContainsString('ahmad.nugroho@umy.ac.id', $teks);
         $this->assertStringContainsString('08/08/2026', $teks);
+    }
+
+    public function test_stempel_muncul_di_kepala_dan_kaki_setiap_halaman(): void
+    {
+        $this->lewatiTanpaQpdf();
+
+        $buku = $this->buatBuku(['watermark_enabled' => true], halaman: 3);
+        $mahasiswa = User::factory()->create(['prodi_id' => $buku->prodi_id]);
+
+        $respons = $this->actingAs($mahasiswa)->get(route('katalog.unduh', $buku));
+        $respons->assertOk();
+
+        // Dua baris per halaman × tiga halaman. Satu baris tunggal mudah
+        // lenyap oleh pemangkasan; keberadaan pasangannya yang dijaga di sini.
+        $jumlah = substr_count(
+            (string) app(PengekstrakTeks::class)->ekstrak(
+                $this->jalurBerkas($respons),
+            ),
+            'Diunduh oleh',
+        );
+
+        $this->assertSame(6, $jumlah);
     }
 
     /**

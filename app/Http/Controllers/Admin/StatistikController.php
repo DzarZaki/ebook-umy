@@ -8,6 +8,7 @@ use App\Models\DownloadLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -34,6 +35,8 @@ class StatistikController extends Controller
             'jumlahMahasiswa' => User::where('role', User::ROLE_MAHASISWA)->where('prodi_id', $user->prodi_id)->count(),
             'grafikHarian' => $this->grafikHarian($bukuIds),
             'bukuTerpopuler' => $this->bukuTerpopuler($bukuIds),
+            'bukuTersimpanTerbanyak' => $this->bukuTersimpanTerbanyak($bukuIds),
+            'totalPenyimpanan' => DB::table('book_saves')->whereIn('book_id', $bukuIds)->count(),
             'catatanTerbaru' => DownloadLog::with(['book', 'user'])
                 ->whereIn('book_id', $bukuIds)
                 ->latest()
@@ -78,6 +81,24 @@ class StatistikController extends Controller
             ->whereIn('id', $bukuIds)
             ->whereHas('downloadLogs')
             ->orderByDesc('download_logs_count')
+            ->take(10)
+            ->get();
+    }
+
+    /**
+     * Sepuluh buku yang paling sering disimpan mahasiswa ke koleksinya.
+     *
+     * Berbeda dengan unduhan yang menyatakan aksi selesai, menyimpan
+     * menyatakan niat: buku dianggap penting walau belum dibuka. Angka ini
+     * murah dikumpulkan dan jarang dilihat — padahal ia sinyal minat
+     * paling jujur dari pembaca.
+     */
+    private function bukuTersimpanTerbanyak($bukuIds)
+    {
+        return Book::withCount('tersimpanOleh')
+            ->whereIn('id', $bukuIds)
+            ->whereHas('tersimpanOleh')
+            ->orderByDesc('tersimpan_oleh_count')
             ->take(10)
             ->get();
     }

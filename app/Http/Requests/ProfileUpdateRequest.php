@@ -35,18 +35,19 @@ class ProfileUpdateRequest extends FormRequest
         $surelBerubah = Str::lower((string) $this->input('email')) !== Str::lower($pengguna->email);
 
         /*
-         * Akun dosen dan Super Admin wajib memakai surel kampus — aturan yang
-         * sama sudah ditegakkan pada formulir Super Admin (StoreDosenRequest
-         * dan UpdateDosenRequest). Tanpa baris ini, halaman profil menjadi
-         * jalan pintas yang melewati aturan itu: akun berhak penuh atas satu
-         * prodi bisa dipindahkan ke kotak surat pribadi, sekaligus memindahkan
-         * jalur pemulihan kata sandi ke luar kendali kampus.
+         * Akun dosen dan Super Admin wajib memakai alamat Gmail — aturan
+         * yang sama sudah ditegakkan pada formulir Super Admin
+         * (StoreDosenRequest dan UpdateDosenRequest). Tanpa baris ini,
+         * halaman profil menjadi jalan pintas yang melewati aturan itu:
+         * akun berhak penuh atas satu prodi bisa dipindahkan ke kotak
+         * surat lain, sekaligus memindahkan jalur pemulihan kata sandi.
          *
-         * Hanya berlaku bila surelnya benar-benar berubah, mengikuti pola yang
-         * sama dengan aturan nama di bawah: pengguna lama yang surelnya belum
-         * sesuai domain tetap dapat memperbarui kolom lain tanpa terkunci.
+         * Hanya berlaku bila surelnya benar-benar berubah, mengikuti pola
+         * yang sama dengan aturan nama di bawah: pengguna lama yang surelnya
+         * belum sesuai domain tetap dapat memperbarui kolom lain tanpa
+         * terkunci.
          */
-        $wajibSurelKampus = $surelBerubah && ($pengguna->isAdmin() || $pengguna->isSuperAdmin());
+        $wajibSurelGmail = $surelBerubah && ($pengguna->isAdmin() || $pengguna->isSuperAdmin());
 
         return [
             'name' => [
@@ -65,8 +66,11 @@ class ProfileUpdateRequest extends FormRequest
                 'email',
                 'max:150',
                 Rule::unique(User::class)->ignore($pengguna->id),
-                Rule::when($wajibSurelKampus, [new EmailDosen]),
+                Rule::when($wajibSurelGmail, [new EmailDosen]),
             ],
+            // Nilainya tidak dipakai lewat fill(): controller menetapkannya
+            // secara eksplisit agar kotak tak-dicentang benar-benar mematikan.
+            'notifikasi_buku_baru' => ['nullable', 'boolean'],
         ];
     }
 

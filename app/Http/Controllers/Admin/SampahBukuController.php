@@ -95,18 +95,18 @@ class SampahBukuController extends Controller
 
         $judul = $buku->title;
 
+        $berkasGagal = [];
+
         try {
-            // Berkas dulu, baris belakangan. Bila penghapusan berkas gagal,
-            // barisnya masih ada dan pekerjaan dapat diulang. Urutan
-            // sebaliknya akan meninggalkan berkas yatim tanpa pemilik.
-            foreach ($buku->berkasnya() as [$disk, $jalur]) {
-                if (blank($jalur)) {
-                    continue;
-                }
-
-                Storage::disk($disk)->delete($jalur);
-            }
-
+            /*
+             * Baris dulu, berkas belakangan.
+             *
+             * Bila urutannya dibalik dan forceDelete() gagal di tengah jalan,
+             * tempat sampah memuat buku yang berkasnya sudah lenyap — tombol
+             * Pulihkan akan menghidupkan buku kosong yang tak bisa dibaca.
+             * Dengan urutan ini, kegagalan hanya menyisakan berkas yatim,
+             * yang otomatis diburu perintah ebook:bersihkan-buku.
+             */
             $buku->forceDelete();
         } catch (Throwable $e) {
             Log::error('SampahBuku: gagal melenyapkan buku.', [
@@ -118,16 +118,39 @@ class SampahBukuController extends Controller
 
             return redirect()
                 ->route('admin.buku-sampah.index')
-                ->with('error', "Buku \"{$judul}\" gagal dilenyapkan. Berkasnya masih terkunci oleh proses lain. Coba beberapa saat lagi.");
+                ->with('error', "Buku \"{$judul}\" gagal dilenyapkan. Coba beberapa saat lagi.");
+        }
+
+        foreach ($buku->berkasnya() as [$disk, $jalur]) {
+            if (blank($jalur)) {
+                continue;
+            }
+
+            try {
+                Storage::disk($disk)->delete($jalur);
+            } catch (Throwable $e) {
+                $berkasGagal[] = $jalur;
+
+                Log::warning('SampahBuku: berkas gagal terhapus setelah baris dilenyapkan.', [
+                    'disk' => $disk,
+                    'jalur' => $jalur,
+                    'galat' => $e->getMessage(),
+                ]);
+            }
         }
 
         Log::info('SampahBuku: buku dilenyapkan permanen.', [
             'judul' => $judul,
             'oleh' => $request->user()?->id,
+            'berkas_tersisa' => $berkasGagal,
         ]);
+
+        $pesan = $berkasGagal === []
+            ? "Buku \"{$judul}\" telah dilenyapkan permanen beserta berkasnya."
+            : "Buku \"{$judul}\" telah dilenyapkan permanen. Sebagian berkasnya gagal terhapus dan akan disapu pembersih terjadwal.";
 
         return redirect()
             ->route('admin.buku-sampah.index')
-            ->with('status', "Buku \"{$judul}\" telah dilenyapkan permanen beserta berkasnya.");
+            ->with('status', $pesan);
     }
 }

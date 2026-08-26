@@ -90,7 +90,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                         </svg>
                         <svg x-show="$store.theme.mode === 'system'" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2-0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                     </button>
                 </div>
@@ -154,17 +154,9 @@
     </div>
 
     {{--
-        Latar partikel — Canvas 2D, tanpa pustaka luar.
-
-        Sebelumnya bagian ini memakai Three.js r128 dari cdnjs. Tag <script>
-        itu berada di <head> tanpa defer, sehingga halaman masuk tidak
-        tergambar sama sekali sampai berkas 600 KB dari server pihak ketiga
-        selesai diambil — atau sampai koneksinya timeout bila jaringan
-        kampus memblokirnya.
-
-        Isi animasinya hanya titik-titik berwarna dengan opasitas rendah:
-        tidak ada geometri 3D, cahaya, maupun tekstur, jadi Canvas 2D sudah
-        memadai. Kedalaman sumbu Z diganti variasi ukuran dan kecepatan.
+        Latar bintang sparkle — Canvas 2D, tanpa pustaka luar.
+        Bintang 4 sudut bergaya modern dengan efek kelap-kelip lembut (twinkling)
+        dan paralaks kursor untuk kedalaman visual.
     --}}
     <script>
     (function () {
@@ -172,20 +164,18 @@
         if (!canvas) return;
 
         // Panel kanan hanya tampil pada lg ke atas (kelas "hidden lg:flex").
-        // Di ponsel canvas-nya berukuran nol, jadi menghitung animasi di sana
-        // hanya menghabiskan baterai tanpa satu piksel pun terlihat.
         if (!window.matchMedia('(min-width: 1024px)').matches) return;
 
         const konteks = canvas.getContext('2d');
         if (!konteks) return;
 
-        const JUMLAH = 280;
-        const WARNA = ['#2A2E3A', '#B85C38', '#1A1D26']; // arang-600, jingga-600, arang-700
-        const OPASITAS = 0.18;
+        const JUMLAH = 160;
+        // Palet warna bintang terang & putih bercahaya
+        const WARNA = ['#FFFFFF', '#FFFFFF', '#F8FAFC', '#FFFDF5', '#FEF3C7'];
 
         let lebar = 0;
         let tinggi = 0;
-        const partikel = [];
+        const bintang = [];
 
         function ubahUkuran() {
             const w = canvas.clientWidth;
@@ -194,14 +184,12 @@
 
             const rasio = Math.min(window.devicePixelRatio || 1, 2);
 
-            // Posisi partikel disimpan dalam piksel CSS; saat panel berubah
-            // ukuran, posisinya diskalakan agar sebarannya tetap merata.
             if (lebar && tinggi) {
                 const skalaX = w / lebar;
                 const skalaY = h / tinggi;
-                for (const p of partikel) {
-                    p.x *= skalaX;
-                    p.y *= skalaY;
+                for (const b of bintang) {
+                    b.x *= skalaX;
+                    b.y *= skalaY;
                 }
             }
 
@@ -217,43 +205,75 @@
         if (!ubahUkuran()) return;
 
         for (let i = 0; i < JUMLAH; i++) {
-            // Pengganti sumbu Z: makin "dekat", makin besar dan makin cepat.
-            const kedalaman = 0.35 + Math.random() * 0.65;
+            const kedalaman = 0.3 + Math.random() * 0.7; // variasi kedalaman
+            const isSparkleBesar = Math.random() < 0.35; // 35% bintang berukuran sedang/besar
 
-            partikel.push({
+            bintang.push({
                 x: Math.random() * lebar,
                 y: Math.random() * tinggi,
-                dx: (Math.random() - 0.5) * 0.3 * kedalaman,
-                dy: (Math.random() - 0.5) * 0.3 * kedalaman,
-                jari: (0.9 + Math.random() * 1.4) * kedalaman,
-                warna: WARNA[i % WARNA.length],
+                dx: (Math.random() - 0.5) * 0.18 * kedalaman,
+                dy: (Math.random() - 0.5) * 0.18 * kedalaman,
+                // Ukuran radius bintang
+                jari: isSparkleBesar 
+                    ? (3.0 + Math.random() * 4.5) * kedalaman 
+                    : (1.2 + Math.random() * 2.0) * kedalaman,
+                warna: WARNA[Math.floor(Math.random() * WARNA.length)],
                 kedalaman: kedalaman,
+                baseAlpha: 0.25 + Math.random() * 0.65,
+                twinkleSpeed: 0.015 + Math.random() * 0.035,
+                twinklePhase: Math.random() * Math.PI * 2,
             });
+        }
+
+        // Fungsi menggambar bintang 4-sudut (sparkle) modern
+        function gambarSparkle(ctx, x, y, r, alpha, warna) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.fillStyle = warna;
+            ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+            // Bentuk bintang 4 sudut melengkung (modern diamond star)
+            ctx.beginPath();
+            ctx.moveTo(0, -r);
+            ctx.quadraticCurveTo(0, 0, r, 0);
+            ctx.quadraticCurveTo(0, 0, 0, r);
+            ctx.quadraticCurveTo(0, 0, -r, 0);
+            ctx.quadraticCurveTo(0, 0, 0, -r);
+            ctx.closePath();
+            ctx.fill();
+
+            // Inti kilau halus untuk bintang yang lebih besar
+            if (r > 3.2) {
+                ctx.beginPath();
+                ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.globalAlpha = Math.min(1, alpha + 0.25);
+                ctx.fill();
+            }
+
+            ctx.restore();
         }
 
         let mx = 0, my = 0, tujuanX = 0, tujuanY = 0;
 
         function gambar() {
             konteks.clearRect(0, 0, lebar, tinggi);
-            konteks.globalAlpha = OPASITAS;
 
-            for (const p of partikel) {
-                const gx = p.x + mx * 14 * p.kedalaman;
-                const gy = p.y + my * 14 * p.kedalaman;
+            for (const b of bintang) {
+                const gx = b.x + mx * 18 * b.kedalaman;
+                const gy = b.y + my * 18 * b.kedalaman;
 
-                konteks.beginPath();
-                konteks.arc(gx, gy, p.jari, 0, Math.PI * 2);
-                konteks.fillStyle = p.warna;
-                konteks.fill();
+                // Efek kelap-kelip lembut (sinusoidal pulse)
+                const kelipAlpha = b.baseAlpha * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(b.twinklePhase)));
+
+                gambarSparkle(konteks, gx, gy, b.jari, kelipAlpha, b.warna);
             }
         }
 
-        // Hormati preferensi sistem: satu frame diam, lalu berhenti. Panel
-        // tetap punya tekstur, tanpa gerakan sama sekali.
+        // Hormati preferensi reduced-motion
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             gambar();
             window.addEventListener('resize', () => { if (ubahUkuran()) gambar(); });
-
             return;
         }
 
@@ -272,15 +292,16 @@
             mx += (tujuanX - mx) * 0.04;
             my += (tujuanY - my) * 0.04;
 
-            for (const p of partikel) {
-                p.x += p.dx;
-                p.y += p.dy;
+            for (const b of bintang) {
+                b.x += b.dx;
+                b.y += b.dy;
+                b.twinklePhase += b.twinkleSpeed;
 
-                // Keluar satu sisi, masuk dari sisi seberang.
-                if (p.x < -4) p.x = lebar + 4;
-                else if (p.x > lebar + 4) p.x = -4;
-                if (p.y < -4) p.y = tinggi + 4;
-                else if (p.y > tinggi + 4) p.y = -4;
+                // Rotasi looping layar
+                if (b.x < -8) b.x = lebar + 8;
+                else if (b.x > lebar + 8) b.x = -8;
+                if (b.y < -8) b.y = tinggi + 8;
+                else if (b.y > tinggi + 8) b.y = -8;
             }
 
             gambar();

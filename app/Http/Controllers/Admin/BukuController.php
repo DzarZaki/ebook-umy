@@ -7,6 +7,8 @@ use App\Http\Requests\Admin\StoreBukuRequest;
 use App\Http\Requests\Admin\UpdateBukuRequest;
 use App\Models\Book;
 use App\Models\Category;
+use App\Services\PemberiTahuBukuBaru;
+use App\Support\Pdf\PengekstrakTeks;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -92,9 +94,10 @@ class BukuController extends Controller
 
         $jalurPdf = $this->simpanPdf($berkas);
         $jalurSampul = $this->simpanSampul($request->file('sampul'));
+        $teksIsi = $this->indeksTeksIsi($jalurPdf);
 
         try {
-            Book::create([
+            $buku = Book::create([
                 'title' => $data['title'],
                 'slug' => $this->buatSlug($data['title']),
                 'author' => $data['author'] ?? null,
@@ -111,6 +114,7 @@ class BukuController extends Controller
                 'download_page_end' => $data['access_mode'] === Book::AKSES_SEBAGIAN ? $data['download_page_end'] : null,
                 'watermark_enabled' => $request->boolean('watermark_enabled'),
                 'is_published' => $request->boolean('is_published'),
+                'search_text' => $teksIsi,
             ]);
         } catch (Throwable $galat) {
             // Barisnya gagal dibuat, jadi berkas yang terlanjur tersalin tidak
@@ -119,6 +123,12 @@ class BukuController extends Controller
             $this->hapusBerkas([['local', $jalurPdf], ['public', $jalurSampul]]);
 
             throw $galat;
+        }
+
+        // Kabari para pelanggan pemberitahuan — hanya bila buku langsung
+        // terbit; draf yang diterbitkan belakangan kabarnya lewat terbitkan().
+        if ($buku->is_published) {
+            app(PemberiTahuBukuBaru::class)->kirim($buku);
         }
 
         return redirect()
@@ -183,6 +193,11 @@ class BukuController extends Controller
             $perubahan['page_count'] = $request->jumlahHalamanTerbaca();
             $perubahan['file_path'] = $pdfBaru;
             $perubahan['file_size'] = $berkas->getSize();
+
+            // Berkasnya berganti, isi indeks pencariannya juga wajib ikut.
+            // Bila ekstraksi gagal, indeks lama justru menyesatkan: ia
+            // menggambarkan buku yang sudah tidak ada.
+            $perubahan['search_text'] = $this->indeksTeksIsi($pdfBaru);
         }
 
         if ($sampul) {
@@ -208,6 +223,36 @@ class BukuController extends Controller
         return redirect()
             ->route('admin.buku.index')
             ->with('status', 'Buku berhasil diperbarui.');
+    }
+
+    /**
+     * Menerbitkan atau menarik terbit sebuah buku.
+     *
+     * Nilai yang diterima adalah keadaan TUJUAN, bukan perintah balik: satu
+     * permintaan selalu berakhir pada keadaan yang sama berapa kali pun
+     * terkirim — penting saat jaringan lambat dan tombolnya tertekan ulang.
+     */
+    public function terbitkan(Request $request, Book $buku): RedirectResponse
+    {
+        $this->authorize('terbitkan', $buku);
+
+        $data = $request->validate([
+            'is_published' => ['required', 'boolean'],
+        ]);
+
+        // Kabar hanya untuk transisi draf → terbit. Menarik-ulang terbitan
+        // atau menariknya kembali bukan peristiwa yang layak dikabarkan.
+        $tadinyaTerbit = $buku->is_published;
+
+        $buku->update(['is_published' => $data['is_published']]);
+
+        if (! $tadinyaTerbit && $data['is_published']) {
+            app(PemberiTahuBukuBaru::class)->kirim($buku);
+        }
+
+        return back()->with('status', $data['is_published']
+            ? "Buku “{$buku->title}” telah diterbitkan."
+            : "Buku “{$buku->title}” ditarik dari terbitan.");
     }
 
     /**
@@ -301,6 +346,20 @@ class BukuController extends Controller
         }
 
         return $this->salinBerkas($sampul, 'public', 'covers', $this->ekstensiGambar($sampul));
+    }
+
+    /**
+     * Mengekstrak isi teks berkas PDF untuk indeks pencarian.
+     *
+     * Kegagalan tidak boleh menggagalkan unggah — buku hasil pindai tanpa
+     * lapisan teks tetap sah sebagai koleksi; ia hanya tak dapat dicari
+     * lewat isinya. Service mencatat sebabnya di log.
+     */
+    private function indeksTeksIsi(string $jalurRelatif): ?string
+    {
+        return app(PengekstrakTeks::class)->ekstrak(
+            Storage::disk('local')->path($jalurRelatif),
+        );
     }
 
     /**

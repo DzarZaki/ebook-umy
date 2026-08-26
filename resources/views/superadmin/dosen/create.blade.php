@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">Tambah Akun Dosen</h2>
+        <h1 class="text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">Tambah Akun Dosen</h1>
     </x-slot>
 
     <div class="py-10">
@@ -19,9 +19,9 @@
                     </div>
 
                     <div class="mt-4">
-                        <x-input-label for="email" value="Email Kampus" />
+                        <x-input-label for="email" value="Email Pribadi" />
                         <x-text-input id="email" name="email" type="email" class="mt-1 block w-full"
-                                      :value="old('email')" required placeholder="nama@umy.ac.id" />
+                                      :value="old('email')" required placeholder="nama@gmail.com" />
                         <x-input-error :messages="$errors->get('email')" class="mt-2" />
                     </div>
 

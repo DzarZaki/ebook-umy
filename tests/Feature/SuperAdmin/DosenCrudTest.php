@@ -31,7 +31,7 @@ class DosenCrudTest extends TestCase
         $this->actingAs($this->superAdmin())
             ->post('/superadmin/dosen', [
                 'name' => 'Dosen Baru',
-                'email' => 'dosen.baru@umy.ac.id',
+                'email' => 'dosen.baru@gmail.com',
                 'prodi_id' => $prodi->id,
                 'password' => 'password123',
                 'password_confirmation' => 'password123',
@@ -39,26 +39,28 @@ class DosenCrudTest extends TestCase
             ->assertRedirect(route('superadmin.dosen.index'));
 
         $this->assertDatabaseHas('users', [
-            'email' => 'dosen.baru@umy.ac.id',
+            'email' => 'dosen.baru@gmail.com',
             'role' => User::ROLE_ADMIN,
             'prodi_id' => $prodi->id,
             'is_active' => true,
         ]);
     }
 
-    public function test_email_dosen_wajib_domain_umy(): void
+    public function test_email_dosen_wajib_domain_gmail(): void
     {
         $prodi = Prodi::factory()->create();
 
         $this->actingAs($this->superAdmin())
             ->post('/superadmin/dosen', [
                 'name' => 'Dosen Baru',
-                'email' => 'dosen@gmail.com',
+                'email' => 'dosen@umy.ac.id',
                 'prodi_id' => $prodi->id,
                 'password' => 'password123',
                 'password_confirmation' => 'password123',
             ])
             ->assertSessionHasErrors('email');
+
+        $this->assertDatabaseMissing('users', ['email' => 'dosen@umy.ac.id']);
     }
 
     public function test_superadmin_dapat_mengubah_prodi_dosen(): void

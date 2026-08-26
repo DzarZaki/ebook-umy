@@ -22,7 +22,7 @@ return [
     | setiap halaman. Berbeda dengan pustaka PHP murni, qpdf sanggup
     | membaca PDF versi 1.5 ke atas yang memakai object stream.
     */
-        'qpdf' => [
+    'qpdf' => [
         'binary' => env('QPDF_BINARY', 'qpdf'),
 
         // Batas waktu setiap pemanggilan qpdf, dalam detik.
@@ -68,7 +68,7 @@ return [
         'maks_per_jam' => (int) env('EBOOK_DOWNLOAD_PER_HOUR', 20),
     ],
 
-       /*
+    /*
     |----------------------------------------------------------------------
     | Streaming baca
     |----------------------------------------------------------------------
@@ -90,6 +90,11 @@ return [
          * "unduh penuh". Berbeda dari kolom watermark_enabled milik buku,
          * yang mengatur stempel pada berkas UNDUHAN.
          *
+         * Kebijakan sesungguhnya milik tiap program studi (kolom
+         * prodi.baca_stempel, diatur dari dashboard dosen). Nilai di sini
+         * hanyalah penengah: dipakai bila pembaca tidak terikat prodi
+         * mana pun — misalnya Super Admin membaca buku umum.
+         *
          * Buku "unduh penuh" tidak distempel di jalur baca: pembacanya
          * memang boleh mengambil seluruh berkas lewat pintu unduh.
          */
@@ -98,9 +103,12 @@ return [
         /*
          * Haruskah penampil ikut dibatasi pada rentang halaman unduhan?
          *
-         * Default mati, karena "unduh sebagian" pada umumnya berarti
+         * Sama seperti stempel di atas: kebijakannya kini milik program
+         * studi (kolom prodi.baca_ikuti_rentang), nilai ini penengahnya.
+         *
+         * Bawaannya mati, karena "unduh sebagian" pada umumnya berarti
          * "baca semuanya di sini, ambil sebagiannya saja". Nyalakan bila
-         * di kampus Anda rentang itu dimaksudkan membatasi bacaan juga.
+         * rentang itu dimaksudkan membatasi bacaan juga.
          */
         'ikuti_rentang' => (bool) env('EBOOK_BACA_IKUTI_RENTANG', false),
 
@@ -135,18 +143,23 @@ return [
     |----------------------------------------------------------------------
     | Watermark
     |----------------------------------------------------------------------
-    | Stempel ditulis pada kaki halaman. Ukuran dalam milimeter agar
-    | cocok dengan satuan bawaan FPDF.
+    | Stempel ditulis DUA kali pada setiap halaman — di kaki dan di kepala.
+    | Satu baris di strip bawah mudah lenyap oleh pemangkasan sederhana;
+    | pasangan ini membuat usaha menghilangkan jejak justru merusak halaman
+    | itu sendiri, sementara margin atas umumnya kosong sehingga kenyamanan
+    | membaca nyaris tidak tersentuh. Ukuran dalam milimeter agar cocok
+    | dengan satuan bawaan FPDF.
     */
     'watermark' => [
         'font' => 'Helvetica',
-        'ukuran_font' => 7.5,
+        'ukuran_font' => 9.0,
 
         // Warna teks stempel dalam RGB.
-        'warna' => [110, 110, 110],
+        'warna' => [95, 95, 95],
 
-        // Jarak teks dari tepi bawah dan tepi kiri halaman (mm).
+        // Jarak teks dari tepi bawah, tepi atas, dan tepi kiri halaman (mm).
         'jarak_bawah' => 7.0,
+        'jarak_atas' => 7.0,
         'jarak_kiri' => 12.0,
 
         // Ukuran halaman stempel (mm). A4 tegak sudah mencakup mayoritas

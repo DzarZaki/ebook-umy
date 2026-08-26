@@ -98,8 +98,11 @@ function siapkanKemiringan() {
 			const x = ((peristiwa.clientX - kotak.left) / kotak.width) * 2 - 1
 			const y = ((peristiwa.clientY - kotak.top) / kotak.height) * 2 - 1
 
-			// Kursor di kiri membuka punggung buku lebih lebar.
-			const putar = 16 - x * 13
+			// Sapuan kursor menyeberangi buku dari punggung ke lembaran:
+			// di tepi kiri punggung membuka lebar (+20°), di tepi kanan
+			// buku terbalik hingga tumpukan halaman menghadap penonton
+			// (−36°). Dari sinilah tipis-tebalnya sebuah buku terbaca.
+			const putar = -8 - x * 28
 			const angkat = -6 - y * 2
 
 			buku.style.transform =

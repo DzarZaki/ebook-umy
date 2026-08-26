@@ -1,8 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-display text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">
+        <h1 class="font-display text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">
             Beranda Dosen &middot; {{ auth()->user()->prodi?->name }}
-        </h2>
+        </h1>
     </x-slot>
 
     <div class="py-10">
@@ -63,6 +63,71 @@
                 : 'Mahasiswa akan kembali dapat mengunduh sesuai aturan tiap buku. Lanjutkan?'"
             :label="$prodiDosen->download_enabled ? 'Matikan Unduhan' : 'Aktifkan Unduhan'"
             label-konfirmasi="Ya, Ubah" />
+    </div>
+
+    {{-- Kebijakan bacaan: stempel identitas & batas halaman pada penampil --}}
+    <div class="mb-6 border border-netral-200 dark:border-arang-600 bg-white/70 dark:bg-arang-700/50 backdrop-blur-sm p-5 rounded-lg shadow-sm dark:shadow-none transition-colors">
+        <p class="font-display text-base font-semibold text-netral-900 dark:text-netral-50">Kebijakan bacaan {{ $prodiDosen->name }}</p>
+        <div class="mt-4 grid gap-4 md:grid-cols-2">
+
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-netral-200 dark:border-arang-600 p-4">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-netral-900 dark:text-netral-50">Stempel bacaan</p>
+                    <p class="mt-1 text-xs leading-relaxed text-netral-600 dark:text-netral-400">
+                        @if ($prodiDosen->baca_stempel)
+                            Bacaan di penampil <strong class="text-emerald-600 dark:text-emerald-400">diberi stempel</strong> identitas pembaca.
+                        @else
+                            Bacaan di penampil <strong class="text-red-600 dark:text-red-400">tanpa stempel</strong>.
+                        @endif
+                    </p>
+                </div>
+
+                <form id="form-sakelar-stempel-baca" method="POST" action="{{ route('admin.pengaturan-baca.update') }}">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="sakelar" value="baca_stempel">
+                    <input type="hidden" name="nilai" value="{{ $prodiDosen->baca_stempel ? 0 : 1 }}">
+                </form>
+
+                <x-tombol-konfirmasi
+                    form-id="form-sakelar-stempel-baca"
+                    judul="Ubah Stempel Bacaan"
+                    :pesan="$prodiDosen->baca_stempel
+                        ? 'Bacaan berikutnya tidak lagi membawa identitas pembaca. Lanjutkan?'
+                        : 'Bacaan berikutnya kembali diberi stempel identitas pembaca. Lanjutkan?'"
+                    :label="$prodiDosen->baca_stempel ? 'Matikan' : 'Aktifkan'"
+                    label-konfirmasi="Ya, Ubah" />
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-md border border-netral-200 dark:border-arang-600 p-4">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-netral-900 dark:text-netral-50">Ikuti rentang unduhan</p>
+                    <p class="mt-1 text-xs leading-relaxed text-netral-400 dark:text-netral-500">
+                        @if ($prodiDosen->baca_ikuti_rentang)
+                            Penampil <strong class="text-jingga-600 dark:text-jingga-400">membatasi bacaan</strong> pada rentang buku "sebagian".
+                        @else
+                            Penampil <strong class="text-emerald-600 dark:text-emerald-400">bebas membaca</strong>; rentang hanya membatasi unduhan.
+                        @endif
+                    </p>
+                </div>
+
+                <form id="form-sakelar-ikuti-rentang" method="POST" action="{{ route('admin.pengaturan-baca.update') }}">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="sakelar" value="baca_ikuti_rentang">
+                    <input type="hidden" name="nilai" value="{{ $prodiDosen->baca_ikuti_rentang ? 0 : 1 }}">
+                </form>
+
+                <x-tombol-konfirmasi
+                    form-id="form-sakelar-ikuti-rentang"
+                    judul="Ubah Batas Bacaan"
+                    :pesan="$prodiDosen->baca_ikuti_rentang
+                        ? 'Mahasiswa akan kembali bebas membaca seluruh halaman buku “sebagian”. Lanjutkan?'
+                        : 'Buku mode “sebagian” hanya dapat dibaca sampai rentang halamannya. Lanjutkan?'"
+                    :label="$prodiDosen->baca_ikuti_rentang ? 'Bebaskan' : 'Batasi'"
+                    label-konfirmasi="Ya, Ubah" />
+            </div>
+        </div>
     </div>
 @endif
 

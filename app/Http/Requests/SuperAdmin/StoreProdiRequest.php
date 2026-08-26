@@ -14,6 +14,18 @@ class StoreProdiRequest extends FormRequest
         return $this->user()?->isSuperAdmin() ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        /*
+         * Spasi berlebih dirapikan SEBELUM pemeriksaan keunikan berjalan.
+         * Tanpa ini, "Sains  Data" lolos sebagai nama "berbeda", padahal
+         * slug-nya runtuh menjadi sama dengan "Sains Data".
+         */
+        $this->merge([
+            'name' => trim((string) preg_replace('/\s+/u', ' ', (string) $this->input('name'))),
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */

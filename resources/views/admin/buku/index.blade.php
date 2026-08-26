@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-display text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">Koleksi Buku</h2>
+        <h1 class="font-display text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">Koleksi Buku</h1>
     </x-slot>
 
     <div class="py-10">
@@ -20,7 +20,7 @@
                 @endcan
             </div>
 
-            <div class="overflow-hidden border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700/50 rounded-lg shadow-sm dark:shadow-none transition-colors">
+            <div class="overflow-x-auto border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700/50 rounded-lg shadow-sm dark:shadow-none transition-colors">
                 <table class="min-w-full divide-y divide-netral-200 dark:divide-arang-600 text-sm">
                     <thead class="bg-netral-50 dark:bg-arang-700 text-left text-netral-600 dark:text-netral-400">
                         <tr>
@@ -56,8 +56,23 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    @canany(['update', 'delete'], $buku)
+                                    @canany(['update', 'delete', 'terbitkan'], $buku)
                                         <div class="flex items-center justify-end gap-2">
+                                            @can('terbitkan', $buku)
+                                                {{-- Satu klik, langsung bisa dibalik — aksi ringan
+                                                     tidak perlu gerbang modal. --}}
+                                                <form method="POST" action="{{ route('admin.buku.terbit', $buku) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="is_published" value="{{ $buku->is_published ? 0 : 1 }}">
+                                                    <button type="submit"
+                                                            @if ($buku->is_published) title="Sembunyikan dari mahasiswa" @else title="Tampilkan ke mahasiswa" @endif
+                                                            class="rounded border px-3 py-1.5 text-sm font-medium transition-colors @if ($buku->is_published) border-netral-200 dark:border-arang-500 text-netral-700 dark:text-netral-300 hover:bg-netral-100 dark:hover:bg-arang-700/40 @else border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 @endif">
+                                                        {{ $buku->is_published ? 'Tarik' : 'Terbitkan' }}
+                                                    </button>
+                                                </form>
+                                            @endcan
+
                                             @can('update', $buku)
                                                 <a href="{{ route('admin.buku.edit', $buku) }}"
                                                    class="rounded border border-netral-200 dark:border-arang-500 px-3 py-1.5 text-sm font-medium text-netral-700 dark:text-netral-300 hover:bg-netral-100 dark:hover:bg-arang-700/40">Ubah</a>

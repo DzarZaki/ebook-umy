@@ -75,18 +75,17 @@ class BacaanTerstempelTest extends TestCase
         );
     }
 
-    public function test_penampil_ikut_dibatasi_saat_sakelar_rentang_dinyalakan(): void
+    public function test_penampil_ikut_dibatasi_saat_prodi_menyalakan_ikuti_rentang(): void
     {
         $this->lewatiTanpaQpdf();
 
-        config(['ebook.baca.ikuti_rentang' => true]);
-
+        // Sakelarnya kini milik program studi; konfigurasi tidak lagi menentukan.
         [$buku, $mahasiswa] = $this->bukuDanPembaca([
             'access_mode' => Book::AKSES_SEBAGIAN,
             'download_page_start' => 3,
             'download_page_end' => 5,
             'watermark_enabled' => false,
-        ]);
+        ], 12, Prodi::factory()->create(['baca_ikuti_rentang' => true]));
 
         $respons = $this->actingAs($mahasiswa)->get(route('katalog.berkas', $buku));
         $respons->assertOk();
@@ -94,11 +93,9 @@ class BacaanTerstempelTest extends TestCase
         $this->assertSame(3, $this->jumlahHalaman($respons->streamedContent()));
     }
 
-    public function test_penampil_tetap_menerima_seluruh_halaman_saat_sakelar_mati(): void
+    public function test_penampil_tetap_menerima_seluruh_halaman_tanpa_kebijakan_rentang(): void
     {
         $this->lewatiTanpaQpdf();
-
-        config(['ebook.baca.ikuti_rentang' => false]);
 
         [$buku, $mahasiswa] = $this->bukuDanPembaca([
             'access_mode' => Book::AKSES_SEBAGIAN,
@@ -118,9 +115,9 @@ class BacaanTerstempelTest extends TestCase
     /**
      * @return array{0: Book, 1: User}
      */
-    private function bukuDanPembaca(array $atribut, int $halaman = 12): array
+    private function bukuDanPembaca(array $atribut, int $halaman = 12, ?Prodi $prodi = null): array
     {
-        $prodi = Prodi::factory()->create();
+        $prodi ??= Prodi::factory()->create();
         $mahasiswa = User::factory()->mahasiswa($prodi)->create();
 
         $buku = Book::factory()->create(array_merge([

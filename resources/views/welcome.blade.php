@@ -226,6 +226,113 @@
     </div>
 
     {{-- =================================================================
+         PROFIL DOSEN PENGAMPU
+         Satu bagian per dosen yang menyalakan penampilan publiknya;
+         susunannya selang-seling agar halaman berirama majalah.
+         ================================================================= --}}
+    @foreach ($daftarProfilDosen as $i => $profilDosen)
+        <section class="border-b border-netral-200 dark:border-arang-600 bg-white/50 dark:bg-arang-800/40 backdrop-blur-sm transition-colors">
+            <div class="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+                <div class="grid gap-12 lg:grid-cols-12 lg:items-center">
+
+                    {{-- Foto & Identitas Singkat Dosen --}}
+                    <div class="lg:col-span-5 {{ $i % 2 === 1 ? 'lg:order-2' : '' }}" data-muncul>
+                        <div class="relative mx-auto max-w-sm lg:mx-0">
+                            {{-- Bingkai Foto Bergaya Studio / Editorial --}}
+                            <div class="overflow-hidden rounded-2xl border-2 border-netral-200 dark:border-arang-600 bg-netral-50 dark:bg-arang-700/80 shadow-md">
+                                @if ($profilDosen->photoUrl())
+                                    <img src="{{ $profilDosen->photoUrl() }}" alt="Foto {{ $profilDosen->nama_lengkap }}"
+                                         class="aspect-[4/5] w-full object-cover">
+                                @else
+                                    <div class="flex aspect-[4/5] w-full items-center justify-center font-display text-7xl font-semibold text-jingga-600 dark:text-jingga-400 bg-gradient-to-br from-jingga-50 to-netral-100 dark:from-arang-800 dark:to-arang-700">
+                                        {{ Str::upper(Str::substr($profilDosen->user?->name ?? 'D', 0, 1)) }}
+                                    </div>
+                                @endif
+                            </div>
+
+                            @if ($profilDosen->quote)
+                                <div class="mt-4 rounded-xl border border-jingga-200/80 dark:border-jingga-700/40 bg-jingga-50/90 dark:bg-jingga-900/20 p-4 text-xs italic leading-relaxed text-jingga-800 dark:text-jingga-300 shadow-sm">
+                                    &ldquo;{{ $profilDosen->quote }}&rdquo;
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Keterangan, Sambutan & Tautan Akademik Dosen --}}
+                    <div class="lg:col-span-7 {{ $i % 2 === 1 ? 'lg:order-1' : '' }}" data-muncul data-tunda="120">
+                        <p class="text-label font-semibold uppercase tracking-[0.24em] text-jingga-600 dark:text-jingga-400">
+                            Dosen Pengampu &middot; Kurator Bahan Ajar
+                        </p>
+
+                        <h2 class="mt-3 font-display text-besar font-semibold text-netral-900 dark:text-netral-50">
+                            {{ $profilDosen->nama_lengkap }}
+                        </h2>
+
+                        <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-netral-600 dark:text-netral-400">
+                            @if ($profilDosen->academic_position)
+                                <span>{{ $profilDosen->academic_position }}</span>
+                            @endif
+                            @if ($profilDosen->user?->prodi)
+                                <span>&middot; {{ $profilDosen->user->prodi->name }}</span>
+                            @endif
+                            @if ($profilDosen->nidn)
+                                <span>&middot; NIDN: {{ $profilDosen->nidn }}</span>
+                            @endif
+                        </div>
+
+                        @if ($profilDosen->bio)
+                            <div class="mt-6 text-sm leading-relaxed text-netral-700 dark:text-netral-300">
+                                {!! nl2br(e($profilDosen->bio)) !!}
+                            </div>
+                        @else
+                            <p class="mt-6 text-sm leading-relaxed text-netral-600 dark:text-netral-300">
+                                Selamat datang di repositori bahan bacaan dan buku kuliah. Seluruh materi di situs ini
+                                dikurasi khusus untuk menunjang proses perkuliahan dan pendalaman materi mahasiswa.
+                            </p>
+                        @endif
+
+                        {{-- Tag Bidang Keahlian --}}
+                        @if (! empty($profilDosen->daftar_keahlian))
+                            <div class="mt-6">
+                                <p class="text-xs font-semibold uppercase tracking-wider text-netral-500 dark:text-netral-400">Bidang Kajian &amp; Riset:</p>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    @foreach ($profilDosen->daftar_keahlian as $keahlian)
+                                        <span class="rounded-md border border-netral-200 dark:border-arang-600 bg-netral-50 dark:bg-arang-700 px-2.5 py-1 text-xs font-medium text-netral-700 dark:text-netral-300 badge-category">
+                                            {{ $keahlian }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Tautan Profil Akademik / Publikasi --}}
+                        @php
+                            $tautan = array_filter([
+                                ['label' => 'Google Scholar', 'url' => $profilDosen->google_scholar_url],
+                                ['label' => 'Scopus / Sinta', 'url' => $profilDosen->scopus_url],
+                                ['label' => 'LinkedIn', 'url' => $profilDosen->linkedin_url],
+                                ['label' => 'Website Pribadi', 'url' => $profilDosen->website_url],
+                            ], fn($t) => ! empty($t['url']));
+                        @endphp
+
+                        @if (! empty($tautan))
+                            <div class="mt-8 flex flex-wrap items-center gap-3 border-t border-netral-200 dark:border-arang-600 pt-5">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-netral-500 dark:text-netral-400">Profil Riset:</span>
+                                @foreach ($tautan as $t)
+                                    <a href="{{ $t['url'] }}" target="_blank" rel="noopener noreferrer"
+                                       class="inline-flex items-center gap-1 rounded border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700 px-3 py-1.5 text-xs font-semibold text-netral-700 dark:text-netral-300 shadow-sm transition hover:border-jingga-500 hover:text-jingga-600 dark:hover:text-jingga-400">
+                                        {{ $t['label'] }} &nearr;
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </section>
+    @endforeach
+
+    {{-- =================================================================
          CARA KERJANYA
          ================================================================= --}}
     <section class="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">

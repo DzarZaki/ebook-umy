@@ -2,15 +2,23 @@
 
 namespace App\Models;
 
+use App\Notifications\VerifikasiEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 /**
  * Model User — mewakili Super Admin, Admin/Dosen, dan Mahasiswa.
+ *
+ * Kontrak MustVerifyEmail dipasang untuk seluruh peran, tetapi penegakan
+ * middleware `verified` hanya terpasang pada jalur yang dilalui mahasiswa.
+ * Dosen dibuat Super Admin dengan surel langsung terverifikasi, dan
+ * Super Admin melampaui semua pemeriksaan lewat policy.
  *
  * @property int $id
  * @property string $name
@@ -19,7 +27,7 @@ use Illuminate\Notifications\Notifiable;
  * @property int|null $prodi_id
  * @property bool $is_active
  */
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
 
@@ -42,6 +50,7 @@ class User extends Authenticatable
         'role',
         'prodi_id',
         'is_active',
+        'notifikasi_buku_baru',
     ];
 
     /**
@@ -65,6 +74,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'notifikasi_buku_baru' => 'boolean',
         ];
     }
 
@@ -74,6 +84,15 @@ class User extends Authenticatable
     public function prodi(): BelongsTo
     {
         return $this->belongsTo(Prodi::class);
+    }
+
+    /**
+     * Tautan verifikasi dikirim memakai surel berbahasa aplikasi ini,
+     * bukan bawaan kerangka yang berbahasa Inggris.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifikasiEmail);
     }
 
     /**
@@ -106,7 +125,19 @@ class User extends Authenticatable
         return $this->hasMany(Bookmark::class);
     }
 
-        /**
+    /** Seluruh catatan halaman milik pengguna ini. */
+    public function pageNotes(): HasMany
+    {
+        return $this->hasMany(PageNote::class);
+    }
+
+    /** Profil akademik & branding dosen. */
+    public function lecturerProfile(): HasOne
+    {
+        return $this->hasOne(LecturerProfile::class);
+    }
+
+    /**
      * Relasi: buku yang diunggah pengguna ini.
      *
      * Dipakai untuk menjaga agar akun dosen tidak dihapus selama masih

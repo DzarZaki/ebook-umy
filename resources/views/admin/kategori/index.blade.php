@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-display text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">Kategori</h2>
+        <h1 class="font-display text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">Kategori</h1>
     </x-slot>
 
     <div class="py-10">
@@ -14,7 +14,7 @@
                 </a>
             </div>
 
-            <div class="overflow-hidden border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700/50 rounded-lg shadow-sm dark:shadow-none transition-colors">
+            <div class="overflow-x-auto border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700/50 rounded-lg shadow-sm dark:shadow-none transition-colors">
                 <table class="min-w-full divide-y divide-netral-200 dark:divide-arang-600 text-sm">
                     <thead class="bg-netral-50 dark:bg-arang-700 text-left text-netral-600 dark:text-netral-400">
                         <tr>

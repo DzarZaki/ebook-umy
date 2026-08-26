@@ -24,7 +24,7 @@ use Throwable;
  *
  * Aman dijalankan berulang: buku yang slug-nya sudah ada dilewati.
  *
-  * Soal berkas. Bila di basis data sudah ada buku sungguhan, PDF dan
+ * Soal berkas. Bila di basis data sudah ada buku sungguhan, PDF dan
  * sampulnya DISALIN untuk tiap buku contoh, bukan dipakai bersama, supaya
  * setiap buku contoh memiliki berkasnya sendiri. Dengan begitu membuang
  * buku contoh lewat Tempat Sampah maupun `ebook:bersihkan-buku` menjadi
@@ -69,7 +69,7 @@ class BukuContohSeeder extends Seeder
         $prodi = Prodi::all()->keyBy('name');
         $dosenProdi = User::where('role', User::ROLE_ADMIN)->get()->keyBy('prodi_id');
 
-                if ($sumber) {
+        if ($sumber) {
             $this->command->info("Berkas contoh akan disalin dari: {$sumber->file_path}");
             $this->command->warn('Setiap buku contoh menyalin PDF-nya sendiri, jadi siapkan ruang disk sekitar 18 kali ukuran berkas di atas.');
         } else {
@@ -156,10 +156,6 @@ class BukuContohSeeder extends Seeder
                 // inisial ikut teruji. Rak sungguhan pun tidak pernah rapi.
                 'cover_path' => $jalurSampul,
 
-                // Separuh buku sengaja dibiarkan tanpa sampul, supaya kotak
-                // inisial ikut teruji. Rak sungguhan pun tidak pernah rapi.
-                'cover_path' => $jalurSampul,
-
                 'access_mode' => $data['akses'],
                 'download_page_start' => $data['akses'] === Book::AKSES_SEBAGIAN ? 1 : null,
                 'download_page_end' => $data['akses'] === Book::AKSES_SEBAGIAN
@@ -178,7 +174,7 @@ class BukuContohSeeder extends Seeder
             $dibuat++;
         }
 
-               $this->isiKoleksiContoh();
+        $this->isiKoleksiContoh();
 
         $this->command->info("Buku contoh dibuat: {$dibuat} · dilewati (sudah ada): {$dilewati}");
 
@@ -208,7 +204,7 @@ class BukuContohSeeder extends Seeder
             }
         }
 
-                $this->command->info("Koleksi contoh diisi untuk {$mahasiswa->count()} mahasiswa.");
+        $this->command->info("Koleksi contoh diisi untuk {$mahasiswa->count()} mahasiswa.");
     }
 
     /**
@@ -266,7 +262,7 @@ class BukuContohSeeder extends Seeder
             ['judul' => 'Literasi Digital dan Keamanan Data', 'penulis' => 'Pusat Teknologi Informasi', 'prodi' => null, 'akses' => Book::AKSES_PENUH, 'terbit' => true, 'watermark' => false, 'bersampul' => false, 'halaman' => 112, 'umurHari' => 52, 'ringkasan' => 'Kata sandi, pengelabuan, dan penjagaan data pribadi.'],
         ];
 
-               /*
+        /*
          * Membuang buku contoh sekarang boleh lewat jalan biasa: pilih
          * semuanya di Tempat Sampah, atau tunggu `ebook:bersihkan-buku`
          * melenyapkannya setelah masa tenggang. Karena setiap buku contoh

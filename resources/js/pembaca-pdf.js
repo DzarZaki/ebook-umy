@@ -32,6 +32,22 @@ async function postJson(url, csrf, body = {}) {
 	})
 }
 
+/**
+ * Helper terpusat untuk semua DELETE JSON ke server.
+ */
+async function deleteJson(url, csrf, body = {}) {
+	return fetch(url, {
+		method: 'DELETE',
+		credentials: 'same-origin',
+		headers: {
+			'Content-Type': 'application/json',
+			'X-CSRF-TOKEN': csrf,
+			Accept: 'application/json',
+		},
+		body: JSON.stringify(body),
+	})
+}
+
 /** Menyiapkan penampil PDF pada halaman baca. */
 async function siapkanPembaca(wadah) {
 	const data = wadah.dataset
@@ -39,14 +55,48 @@ async function siapkanPembaca(wadah) {
 	const status = document.getElementById('status-pembaca')
 	const isianHalaman = document.getElementById('isian-halaman')
 	const totalHalaman = document.getElementById('total-halaman')
+	const labelZoom = document.getElementById('label-zoom')
+
+	// Elemen Penanda
 	const tombolPenanda = document.getElementById('tombol-penanda')
 	const ikonPenandaOutline = document.getElementById('ikon-penanda-outline')
 	const ikonPenandaIsi = document.getElementById('ikon-penanda-isi')
-	const tombolPanelPenanda = document.getElementById('tombol-panel-penanda')
-	const panelPenanda = document.getElementById('panel-penanda')
+
+	// Elemen Catatan
+	const tombolCatatan = document.getElementById('tombol-catatan')
+	const dotCatatanAktif = document.getElementById('dot-catatan-aktif')
+	const modalCatatan = document.getElementById('modal-catatan')
+	const judulHalamanCatatan = document.getElementById('judul-halaman-catatan')
+	const isianTeksCatatan = document.getElementById('isian-teks-catatan')
+	const infoWaktuCatatan = document.getElementById('info-waktu-catatan')
+	const tombolSimpanCatatanModal = document.getElementById('tombol-simpan-catatan-modal')
+	const tombolHapusCatatanModal = document.getElementById('tombol-hapus-catatan-modal')
+	const tombolTutupModalCatatan = document.getElementById('tombol-tutup-modal-catatan')
+	const tombolBatalCatatan = document.getElementById('tombol-batal-catatan')
+
+	// Elemen Drawer
+	const drawerPenanda = document.getElementById('drawer-penanda')
+	const drawerBackdrop = document.getElementById('drawer-backdrop')
+	const drawerPanel = document.getElementById('drawer-panel')
+	const tombolBukaDrawer = document.getElementById('tombol-buka-drawer')
+	const tombolTutupDrawer = document.getElementById('tombol-tutup-drawer')
+	const tabDrawerPenanda = document.getElementById('tab-drawer-penanda')
+	const tabDrawerCatatan = document.getElementById('tab-drawer-catatan')
+	const kontenTabPenanda = document.getElementById('konten-tab-penanda')
+	const kontenTabCatatan = document.getElementById('konten-tab-catatan')
+	const jumlahPenandaTab = document.getElementById('jumlah-penanda-tab')
+	const jumlahCatatanTab = document.getElementById('jumlah-catatan-tab')
 	const daftarPenandaEl = document.getElementById('daftar-penanda')
 	const pesanPenandaKosong = document.getElementById('pesan-penanda-kosong')
-	const jumlahPenanda = document.getElementById('jumlah-penanda')
+	const daftarCatatanEl = document.getElementById('daftar-catatan')
+	const pesanCatatanKosong = document.getElementById('pesan-catatan-kosong')
+	const tombolTambahCatatanDrawer = document.getElementById('tombol-tambah-catatan-drawer')
+
+	// Elemen Mode Fokus & Lebar Penuh
+	const tombolFokus = document.getElementById('tombol-fokus')
+	const ikonFokusMasuk = document.getElementById('ikon-fokus-masuk')
+	const ikonFokusKeluar = document.getElementById('ikon-fokus-keluar')
+	const tombolLebarPenuh = document.getElementById('tombol-lebar-penuh')
 
 	let dokumen = null
 	let halamanAktif = 1
@@ -56,34 +106,46 @@ async function siapkanPembaca(wadah) {
 	let observerHalamanAktif = null
 	let sedangUbahSkala = false
 	let sinkronisasiTerjadwal = false
+	let modeFokusAktif = false
 	let ukuranPlaceholder = { lebar: 0, tinggi: 0, rasio: 1 }
+	let pemicuOverlay = null
+
+	// Pengelolaan fokus overlay: elemen yang bisa menerima fokus di dalam
+	// sebuah wadah, untuk memindahkan dan mengunci siklus Tab.
+	const fokusableDalam = (akar) =>
+		[...akar.querySelectorAll('button, a[href], input, textarea')]
+			.filter((el) => ! el.disabled && el.offsetParent !== null)
+
+	function fokusPertama(wadah) {
+		fokusableDalam(wadah)[0]?.focus()
+	}
+
 	const daftarPenanda = new Set()
+	const daftarCatatan = new Map() // page -> { id, halaman, isi, waktu }
 	const halamanTerlihat = new Set()
 	const halamanDenganKanvas = new Set()
 	const rasioTerlihat = new Map()
 	const keadaanHalaman = new Map()
 
+	function perbaruiLabelZoom() {
+		if (labelZoom) {
+			labelZoom.textContent = `${Math.round(skala * 100)}%`
+		}
+	}
+
 	/** Menampilkan pesan di bilah status, dan menyembunyikannya bila tidak ada pesan. */
 	function tampilkanStatus(teks) {
 		if (!status) return
-
 		status.textContent = teks
 		status.classList.toggle('hidden', teks === '')
 	}
-	
-		// Berkas diambil sekali untuk keperluan membaca di layar. Unduhan tidak lagi
-	// dirakit di browser — server yang memotong halaman dan menempelkan stempel.
 
 	tampilkanStatus('Memuat berkas…')
 
 	async function muatDokumen() {
 		try {
 			const respons = await fetch(data.urlBerkas, { credentials: 'same-origin' })
-
-			if (!respons.ok) {
-				throw new Error(`Server menjawab ${respons.status}`)
-			}
-
+			if (!respons.ok) throw new Error(`Server menjawab ${respons.status}`)
 			bytesAsli = await respons.arrayBuffer()
 		} catch (galat) {
 			console.error('Gagal mengambil berkas PDF:', galat)
@@ -91,13 +153,11 @@ async function siapkanPembaca(wadah) {
 			throw galat
 		}
 
-		// Dokumen dibuka dari salinan bytes karena pdf.js memindahkan kepemilikan buffer.
 		try {
 			const tugas = pdfjsLib.getDocument({
 				data: bytesAsli.slice(0),
 				...ASET_PDFJS,
 			})
-
 			return await tugas.promise
 		} catch (galat) {
 			console.error('Gagal membuka dokumen PDF:', galat)
@@ -108,7 +168,6 @@ async function siapkanPembaca(wadah) {
 
 	async function muatDataBacaAwal() {
 		if (!data.urlDataBaca) return null
-
 		try {
 			const respons = await fetch(data.urlDataBaca, { credentials: 'same-origin' })
 			if (!respons.ok) return null
@@ -136,6 +195,7 @@ async function siapkanPembaca(wadah) {
 
 	if (totalHalaman) totalHalaman.textContent = dokumen.numPages
 	if (isianHalaman) isianHalaman.max = dokumen.numPages
+	perbaruiLabelZoom()
 
 	function frameBerikutnya() {
 		return new Promise((lanjut) => requestAnimationFrame(lanjut))
@@ -183,7 +243,7 @@ async function siapkanPembaca(wadah) {
 			const elemen = document.createElement('div')
 			elemen.id = `halaman-${nomor}`
 			elemen.dataset.halaman = `${nomor}`
-			elemen.className = 'mx-auto mb-4 overflow-hidden bg-white shadow-sm'
+			elemen.className = 'mx-auto mb-6 overflow-hidden bg-white rounded shadow-md transition-shadow'
 			daftarHalaman.appendChild(elemen)
 			const keadaan = { elemen, sedangDirender: false, gagalRender: false, rasio: ukuranPlaceholder.rasio }
 			terapkanUkuranPlaceholder(keadaan)
@@ -298,11 +358,11 @@ async function siapkanPembaca(wadah) {
 			const pesan = document.createElement('div')
 			pesan.className = 'flex h-full flex-col items-center justify-center gap-2 px-4 py-6 text-center'
 			const teks = document.createElement('p')
-			teks.className = 'text-sm text-kabut-600'
+			teks.className = 'text-sm text-netral-500'
 			teks.textContent = `Halaman ${nomor} gagal dimuat`
 			const tombol = document.createElement('button')
 			tombol.type = 'button'
-			tombol.className = 'rounded-sm border border-kabut-300 px-3 py-1.5 text-sm font-medium text-kabut-700 hover:bg-kabut-100'
+			tombol.className = 'rounded-sm border border-netral-300 px-3 py-1.5 text-sm font-medium text-netral-700 hover:bg-netral-100'
 			tombol.textContent = 'Coba lagi'
 			tombol.onclick = () => { void renderHalamanJikaPerlu(nomor, true) }
 			pesan.appendChild(teks)
@@ -361,6 +421,7 @@ async function siapkanPembaca(wadah) {
 		halamanAktif = nomorValid
 		if (isianHalaman) isianHalaman.value = nomorValid
 		perbaruiStatusPenanda()
+		perbaruiStatusCatatan()
 		if (berubah && simpan) {
 			simpanProgres(halamanAktif, dokumen.numPages)
 		}
@@ -435,6 +496,9 @@ async function siapkanPembaca(wadah) {
 		gulirKeHalaman(nomor, 'smooth')
 	}
 
+	// =========================================================================
+	// PENGELOLAAN PENANDA HALAMAN (BOOKMARK)
+	// =========================================================================
 	function pulihkanPenanda(daftar) {
 		daftarPenanda.clear()
 		daftar.forEach((nomor) => {
@@ -450,7 +514,7 @@ async function siapkanPembaca(wadah) {
 		if (!tombolPenanda) return
 		const aktif = daftarPenanda.has(halamanAktif)
 		tombolPenanda.setAttribute('aria-label', aktif ? 'Hapus penanda halaman ini' : 'Tandai halaman ini')
-		tombolPenanda.setAttribute('title', aktif ? 'Hapus penanda halaman ini' : 'Tandai halaman ini')
+		tombolPenanda.setAttribute('title', aktif ? 'Hapus penanda halaman ini (B)' : 'Tandai halaman ini (B)')
 		tombolPenanda.setAttribute('aria-pressed', aktif ? 'true' : 'false')
 		if (ikonPenandaOutline) ikonPenandaOutline.classList.toggle('hidden', aktif)
 		if (ikonPenandaIsi) ikonPenandaIsi.classList.toggle('hidden', !aktif)
@@ -458,54 +522,308 @@ async function siapkanPembaca(wadah) {
 	}
 
 	function renderDaftarPenanda() {
-		if (!daftarPenandaEl || !pesanPenandaKosong || !jumlahPenanda) return
+		if (!daftarPenandaEl || !pesanPenandaKosong) return
 
 		const urut = Array.from(daftarPenanda).sort((a, b) => a - b)
 		daftarPenandaEl.innerHTML = ''
-		jumlahPenanda.textContent = urut.length
+		if (jumlahPenandaTab) jumlahPenandaTab.textContent = urut.length
 		pesanPenandaKosong.classList.toggle('hidden', urut.length > 0)
 
 		urut.forEach((nomor) => {
 			const item = document.createElement('li')
 			const tombol = document.createElement('button')
 			tombol.type = 'button'
-			tombol.className = 'rounded-sm border border-kabut-300 px-3 py-1.5 text-sm font-medium text-kabut-700 hover:bg-kabut-100'
-			tombol.textContent = `Hal. ${nomor}`
+			tombol.className = 'rounded-md border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700 px-3.5 py-2 text-xs font-semibold text-netral-800 dark:text-netral-200 hover:border-jingga-500 hover:text-jingga-600 transition shadow-sm'
+			tombol.innerHTML = `Halaman <span class="font-display text-sm font-bold text-jingga-600 dark:text-jingga-400">${nomor}</span>`
 			if (nomor === halamanAktif) {
-				tombol.classList.add('bg-kabut-100')
+				tombol.classList.add('ring-2', 'ring-jingga-500', 'bg-jingga-50/50')
 			}
-			tombol.onclick = () => keHalaman(nomor)
+			tombol.onclick = () => {
+				keHalaman(nomor)
+				tutupDrawer()
+			}
 			item.appendChild(tombol)
 			daftarPenandaEl.appendChild(item)
 		})
 	}
 
-	function aturPanelPenanda(terbuka) {
-		if (!panelPenanda || !tombolPanelPenanda) return
-		panelPenanda.classList.toggle('hidden', !terbuka)
-		tombolPanelPenanda.setAttribute('aria-expanded', terbuka ? 'true' : 'false')
-		tombolPanelPenanda.setAttribute('title', terbuka ? 'Tutup daftar penanda' : 'Buka daftar penanda')
-		tombolPanelPenanda.setAttribute('aria-label', terbuka ? 'Tutup daftar penanda' : 'Buka daftar penanda')
+	// =========================================================================
+	// PENGELOLAAN CATATAN BELAJAR (PAGE NOTES)
+	// =========================================================================
+	function pulihkanCatatan(daftar) {
+		daftarCatatan.clear()
+		if (Array.isArray(daftar)) {
+			daftar.forEach((c) => {
+				const hal = Number.parseInt(c.halaman, 10)
+				if (Number.isInteger(hal)) {
+					daftarCatatan.set(hal, c)
+				}
+			})
+		}
+		perbaruiStatusCatatan()
 	}
 
-	/** Memasang penangan klik hanya bila tombolnya benar-benar ada. */
-	function pasangKlik(id, penangan) {
-		const tombol = document.getElementById(id)
-		if (tombol) tombol.onclick = penangan
+	function perbaruiStatusCatatan() {
+		const ada = daftarCatatan.has(halamanAktif)
+		if (dotCatatanAktif) {
+			dotCatatanAktif.classList.toggle('hidden', !ada)
+		}
+		renderDaftarCatatan()
 	}
 
-	pasangKlik('tombol-sebelum', () => keHalaman(halamanAktif - 1))
-	pasangKlik('tombol-sesudah', () => keHalaman(halamanAktif + 1))
+	function bukaModalCatatan(halaman = halamanAktif) {
+		if (!modalCatatan) return
 
+		// Simpan pemicunya supaya fokus bisa pulih saat modal ditutup.
+		pemicuOverlay = document.activeElement
+
+		if (judulHalamanCatatan) judulHalamanCatatan.textContent = halaman
+
+		const catatanAda = daftarCatatan.get(halaman)
+		if (isianTeksCatatan) {
+			isianTeksCatatan.value = catatanAda ? catatanAda.isi : ''
+		}
+		if (infoWaktuCatatan) {
+			infoWaktuCatatan.textContent = catatanAda && catatanAda.waktu ? `Terakhir disimpan: ${catatanAda.waktu}` : ''
+		}
+		if (tombolHapusCatatanModal) {
+			tombolHapusCatatanModal.classList.toggle('hidden', !catatanAda)
+		}
+
+		modalCatatan.classList.remove('hidden')
+		modalCatatan.classList.add('flex')
+		if (isianTeksCatatan) isianTeksCatatan.focus()
+	}
+
+	function tutupModalCatatan() {
+		if (!modalCatatan) return
+		modalCatatan.classList.add('hidden')
+		modalCatatan.classList.remove('flex')
+
+		pemicuOverlay?.focus?.()
+		pemicuOverlay = null
+	}
+
+	async function simpanCatatanAktif() {
+		if (!data.urlCatatanSimpan || !isianTeksCatatan) return
+		const isi = isianTeksCatatan.value.trim()
+		const hal = halamanAktif
+
+		if (!isi) {
+			// Jika kosong dan sebelumnya ada catatan, hapus catatan
+			if (daftarCatatan.has(hal)) {
+				await hapusCatatanAktif()
+			}
+			tutupModalCatatan()
+			return
+		}
+
+		try {
+			if (tombolSimpanCatatanModal) tombolSimpanCatatanModal.disabled = true
+			const res = await postJson(data.urlCatatanSimpan, data.csrf, { halaman: hal, isi })
+			if (!res.ok) throw new Error(`Server menjawab ${res.status}`)
+			const hasil = await res.json()
+			pulihkanCatatan(hasil.catatan || [])
+			tutupModalCatatan()
+		} catch (galat) {
+			console.warn('Gagal menyimpan catatan:', galat)
+			alert('Catatan gagal disimpan. Silakan coba lagi.')
+		} finally {
+			if (tombolSimpanCatatanModal) tombolSimpanCatatanModal.disabled = false
+		}
+	}
+
+	async function hapusCatatanAktif() {
+		if (!data.urlCatatanHapus) return
+		const hal = halamanAktif
+
+		try {
+			const res = await deleteJson(data.urlCatatanHapus, data.csrf, { halaman: hal })
+			if (!res.ok) throw new Error(`Server menjawab ${res.status}`)
+			const hasil = await res.json()
+			pulihkanCatatan(hasil.catatan || [])
+			tutupModalCatatan()
+		} catch (galat) {
+			console.warn('Gagal menghapus catatan:', galat)
+		}
+	}
+
+	function renderDaftarCatatan() {
+		if (!daftarCatatanEl || !pesanCatatanKosong) return
+
+		const list = Array.from(daftarCatatan.values()).sort((a, b) => a.halaman - b.halaman)
+		daftarCatatanEl.innerHTML = ''
+		if (jumlahCatatanTab) jumlahCatatanTab.textContent = list.length
+		pesanCatatanKosong.classList.toggle('hidden', list.length > 0)
+
+		list.forEach((item) => {
+			const card = document.createElement('div')
+			card.className = 'rounded-xl border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700/70 p-4 shadow-sm hover:border-jingga-500/50 transition cursor-pointer'
+			card.onclick = () => {
+				keHalaman(item.halaman)
+				tutupDrawer()
+			}
+
+			const head = document.createElement('div')
+			head.className = 'flex items-center justify-between mb-2'
+
+			const badge = document.createElement('span')
+			badge.className = 'rounded bg-jingga-50 dark:bg-jingga-900/40 border border-jingga-200 dark:border-jingga-700/50 px-2.5 py-0.5 text-xs font-semibold text-jingga-700 dark:text-jingga-300'
+			badge.textContent = `Halaman ${item.halaman}`
+
+			const waktu = document.createElement('span')
+			waktu.className = 'text-[11px] text-netral-400'
+			waktu.textContent = item.waktu || ''
+
+			head.appendChild(badge)
+			head.appendChild(waktu)
+
+			const teks = document.createElement('p')
+			teks.className = 'text-xs leading-relaxed text-netral-700 dark:text-netral-200 line-clamp-3 whitespace-pre-line'
+			teks.textContent = item.isi
+
+			card.appendChild(head)
+			card.appendChild(teks)
+			daftarCatatanEl.appendChild(card)
+		})
+	}
+
+	// =========================================================================
+	// SMART DRAWER (SLIDE-OVER PANEL)
+	// =========================================================================
+	// Penahan penutupan disimpan: bila drawer dibuka lagi sebelum transisi
+	// 300 ms selesai, penundaan lama wajib dibatalkan — kalau tidak, jadwal
+	// lama menyembunyikan drawer yang baru saja dibuka.
+	let timerTutupDrawer = null
+
+	function bukaDrawer(tab = 'penanda') {
+		if (!drawerPenanda || !drawerBackdrop || !drawerPanel) return
+
+		clearTimeout(timerTutupDrawer)
+
+		pemicuOverlay = document.activeElement
+
+		drawerPenanda.classList.remove('hidden')
+		requestAnimationFrame(() => {
+			drawerBackdrop.classList.remove('opacity-0')
+			drawerBackdrop.classList.add('opacity-100')
+			drawerPanel.classList.remove('translate-x-full')
+			drawerPanel.classList.add('translate-x-0')
+		})
+		setTabDrawer(tab)
+		fokusPertama(drawerPanel)
+	}
+
+	function tutupDrawer() {
+		if (!drawerPenanda || !drawerBackdrop || !drawerPanel) return
+		drawerBackdrop.classList.remove('opacity-100')
+		drawerBackdrop.classList.add('opacity-0')
+		drawerPanel.classList.remove('translate-x-0')
+		drawerPanel.classList.add('translate-x-full')
+		clearTimeout(timerTutupDrawer)
+		timerTutupDrawer = setTimeout(() => {
+			drawerPenanda.classList.add('hidden')
+		}, 300)
+
+		if (modalCatatan && modalCatatan.classList.contains('hidden')) {
+			// Modal catatan yang dibuka dari drawer menimpa pemicunya;
+			// pemulihan hanya dilakukan bila tidak ada overlay penerus.
+			pemicuOverlay?.focus?.()
+			pemicuOverlay = null
+		}
+	}
+
+	function setTabDrawer(tab) {
+		if (!tabDrawerPenanda || !tabDrawerCatatan || !kontenTabPenanda || !kontenTabCatatan) return
+		if (tab === 'penanda') {
+			tabDrawerPenanda.classList.add('border-jingga-600', 'text-jingga-600', 'dark:text-jingga-400', 'bg-white', 'dark:bg-arang-800')
+			tabDrawerPenanda.classList.remove('border-transparent', 'text-netral-500')
+			tabDrawerCatatan.classList.remove('border-jingga-600', 'text-jingga-600', 'dark:text-jingga-400', 'bg-white', 'dark:bg-arang-800')
+			tabDrawerCatatan.classList.add('border-transparent', 'text-netral-500')
+			kontenTabPenanda.classList.remove('hidden')
+			kontenTabCatatan.classList.add('hidden')
+		} else {
+			tabDrawerCatatan.classList.add('border-jingga-600', 'text-jingga-600', 'dark:text-jingga-400', 'bg-white', 'dark:bg-arang-800')
+			tabDrawerCatatan.classList.remove('border-transparent', 'text-netral-500')
+			tabDrawerPenanda.classList.remove('border-jingga-600', 'text-jingga-600', 'dark:text-jingga-400', 'bg-white', 'dark:bg-arang-800')
+			tabDrawerPenanda.classList.add('border-transparent', 'text-netral-500')
+			kontenTabCatatan.classList.remove('hidden')
+			kontenTabPenanda.classList.add('hidden')
+		}
+	}
+
+	// =========================================================================
+	// MODE FOKUS (ZEN / FULLSCREEN MODE)
+	// =========================================================================
+	function toggleModeFokus() {
+		modeFokusAktif = !modeFokusAktif
+		const headerBaca = document.getElementById('header-baca')
+		const infoAturan = document.getElementById('info-aturan-baca')
+		const navUtama = document.querySelector('nav')
+
+		if (ikonFokusMasuk) ikonFokusMasuk.classList.toggle('hidden', modeFokusAktif)
+		if (ikonFokusKeluar) ikonFokusKeluar.classList.toggle('hidden', !modeFokusAktif)
+
+		if (modeFokusAktif) {
+			if (navUtama) navUtama.classList.add('hidden')
+			if (headerBaca) headerBaca.classList.add('hidden')
+			if (infoAturan) infoAturan.classList.add('hidden')
+			if (tombolFokus) tombolFokus.classList.add('bg-jingga-50', 'text-jingga-600', 'border-jingga-500')
+		} else {
+			if (navUtama) navUtama.classList.remove('hidden')
+			if (headerBaca) headerBaca.classList.remove('hidden')
+			if (infoAturan) infoAturan.classList.remove('hidden')
+			if (tombolFokus) tombolFokus.classList.remove('bg-jingga-50', 'text-jingga-600', 'border-jingga-500')
+		}
+
+		// Sesuaikan ulang render setelah layout berubah
+		jadwalkanSinkronisasiRender()
+	}
+
+	// =========================================================================
+	// SESUAIKAN LEBAR (FIT TO WIDTH)
+	// =========================================================================
+	async function sesuaikanLebar() {
+		if (sedangUbahSkala || !wadah) return
+		const halamanPertama = await dokumen.getPage(1)
+		const viewportAsli = halamanPertama.getViewport({ scale: 1.0 })
+		const lebarWadah = wadah.clientWidth - 48 // margin dalam
+		if (lebarWadah <= 0) return
+
+		const rasioSkala = Math.min(Math.max(lebarWadah / viewportAsli.width, 0.6), 2.8)
+		skala = Math.round(rasioSkala * 100) / 100
+		perbaruiLabelZoom()
+
+		sedangUbahSkala = true
+		const target = halamanAktif
+		try {
+			await hitungUkuranPlaceholder()
+			keadaanHalaman.forEach((keadaan) => terapkanUkuranPlaceholder(keadaan))
+			bongkarSemuaKanvas()
+			jadwalkanSinkronisasiRender()
+			const tujuan = gulirKeHalaman(target, 'auto')
+			if (tujuan) {
+				await tungguGulirSelesai(tujuan)
+				perbaruiHalamanAktif(tujuan, false)
+			}
+		} finally {
+			sedangUbahSkala = false
+		}
+	}
+
+	// =========================================================================
+	// SKALA ZOOM
+	// =========================================================================
 	async function ubahSkala(delta) {
 		if (sedangUbahSkala) return
 
-		const skalaBaru = Math.min(Math.max(skala + delta, 0.6), 3)
+		const skalaBaru = Math.min(Math.max(Math.round((skala + delta) * 100) / 100, 0.6), 3)
 		if (skalaBaru === skala) return
 
 		sedangUbahSkala = true
 		const target = halamanAktif
 		skala = skalaBaru
+		perbaruiLabelZoom()
 
 		try {
 			await hitungUkuranPlaceholder()
@@ -522,25 +840,145 @@ async function siapkanPembaca(wadah) {
 		}
 	}
 
-	pasangKlik('tombol-perbesar', () => { void ubahSkala(0.25) })
-	pasangKlik('tombol-perkecil', () => { void ubahSkala(-0.25) })
-	pasangKlik('tombol-panel-penanda', () => {
-		if (!panelPenanda) return
-		const terbuka = panelPenanda.classList.contains('hidden')
-		aturPanelPenanda(terbuka)
-	})
+	/** Memasang penangan klik hanya bila tombolnya benar-benar ada. */
+	function pasangKlik(id, penangan) {
+		const tombol = document.getElementById(id)
+		if (tombol) tombol.onclick = penangan
+	}
 
+	// Navigasi Halaman
+	pasangKlik('tombol-sebelum', () => keHalaman(halamanAktif - 1))
+	pasangKlik('tombol-sesudah', () => keHalaman(halamanAktif + 1))
 	if (isianHalaman) {
 		isianHalaman.onchange = () => keHalaman(parseInt(isianHalaman.value) || 1)
 	}
 
-	// Panah kiri/kanan untuk berpindah halaman.
-	document.addEventListener('keydown', (peristiwa) => {
-		if (peristiwa.target.tagName === 'INPUT') return
-		if (peristiwa.key === 'ArrowRight') keHalaman(halamanAktif + 1)
-		if (peristiwa.key === 'ArrowLeft') keHalaman(halamanAktif - 1)
+	// Zoom & Fit
+	pasangKlik('tombol-perbesar', () => { void ubahSkala(0.2) })
+	pasangKlik('tombol-perkecil', () => { void ubahSkala(-0.2) })
+	pasangKlik('tombol-lebar-penuh', () => { void sesuaikanLebar() })
+
+	// Mode Fokus
+	pasangKlik('tombol-fokus', toggleModeFokus)
+
+	// Bookmark Toggle
+	pasangKlik('tombol-penanda', () => {
+		if (!data.urlPenanda) return
+		postJson(data.urlPenanda, data.csrf, { halaman: halamanAktif })
+			.then(async (res) => {
+				if (res.status === 429) return
+				if (!res.ok) throw new Error(`Server menjawab ${res.status}`)
+				const hasil = await res.json()
+				pulihkanPenanda(Array.isArray(hasil.penanda) ? hasil.penanda : [])
+			})
+			.catch((galat) => console.warn('Gagal mengubah penanda:', galat))
 	})
 
+	// Catatan Modal Actions
+	pasangKlik('tombol-catatan', () => bukaModalCatatan(halamanAktif))
+	pasangKlik('tombol-tutup-modal-catatan', tutupModalCatatan)
+	pasangKlik('tombol-batal-catatan', tutupModalCatatan)
+	pasangKlik('tombol-simpan-catatan-modal', simpanCatatanAktif)
+	pasangKlik('tombol-hapus-catatan-modal', hapusCatatanAktif)
+
+	// Drawer Actions
+	pasangKlik('tombol-buka-drawer', () => bukaDrawer('penanda'))
+	pasangKlik('tombol-tutup-drawer', tutupDrawer)
+	pasangKlik('drawer-backdrop', tutupDrawer)
+	pasangKlik('tab-drawer-penanda', () => setTabDrawer('penanda'))
+	pasangKlik('tab-drawer-catatan', () => setTabDrawer('catatan'))
+	pasangKlik('tombol-tambah-catatan-drawer', () => {
+		tutupDrawer()
+		bukaModalCatatan(halamanAktif)
+	})
+
+	// Keyboard Shortcuts
+	document.addEventListener('keydown', (peristiwa) => {
+		// Jebakan Tab: selama drawer atau modal catatan terbuka, siklus
+		// fokus dikunci di dalam wadahnya — keyboard tidak boleh lolos
+		// ke halaman di belakang overlay.
+		if (peristiwa.key === 'Tab') {
+			const overlay =
+				modalCatatan && ! modalCatatan.classList.contains('hidden')
+					? modalCatatan
+					: drawerPenanda && ! drawerPenanda.classList.contains('hidden')
+						? drawerPanel
+						: null
+
+			if (overlay) {
+				const milik = fokusableDalam(overlay)
+				if (milik.length) {
+					const pertama = milik[0]
+					const terakhir = milik[milik.length - 1]
+
+					if (peristiwa.shiftKey && document.activeElement === pertama) {
+						peristiwa.preventDefault()
+						terakhir.focus()
+					} else if (! peristiwa.shiftKey && document.activeElement === terakhir) {
+						peristiwa.preventDefault()
+						pertama.focus()
+					}
+				}
+			}
+
+			return
+		}
+
+		if (peristiwa.target.tagName === 'INPUT' || peristiwa.target.tagName === 'TEXTAREA') {
+			if (peristiwa.key === 'Escape') {
+				tutupModalCatatan()
+				tutupDrawer()
+			}
+			return
+		}
+
+		/*
+		 * Selama overlay (modal catatan atau drawer) terbuka, pintasan
+		 * pembaca diam: memindah halaman, zoom, penanda, dan mode fokus
+		 * tidak boleh menyentuh buku di baliknya. Escape tetap lolos agar
+		 * overlay dapat ditutup dari keyboard.
+		 */
+		const overlayTerbuka =
+			(modalCatatan && ! modalCatatan.classList.contains('hidden')) ||
+			(drawerPenanda && ! drawerPenanda.classList.contains('hidden'))
+
+		if (overlayTerbuka && peristiwa.key !== 'Escape') {
+			return
+		}
+
+		if (peristiwa.key === 'ArrowRight') keHalaman(halamanAktif + 1)
+		if (peristiwa.key === 'ArrowLeft') keHalaman(halamanAktif - 1)
+
+		// Pintasan zoom yang dijanjikan tooltip toolbar. Hanya untuk tombol
+		// polos — Ctrl/Alt +/− tetap milik zoom bawaan browser.
+		if (!peristiwa.ctrlKey && !peristiwa.metaKey && !peristiwa.altKey) {
+			if (peristiwa.key === '+' || peristiwa.key === '=') {
+				void ubahSkala(0.2)
+				return
+			}
+			if (peristiwa.key === '-' || peristiwa.key === '_') {
+				void ubahSkala(-0.2)
+				return
+			}
+		}
+
+		if (peristiwa.key === 'f' || peristiwa.key === 'F') toggleModeFokus()
+		if (peristiwa.key === 'b' || peristiwa.key === 'B') {
+			const btn = document.getElementById('tombol-penanda')
+			if (btn) btn.click()
+		}
+		if (peristiwa.key === 'n' || peristiwa.key === 'N') bukaModalCatatan(halamanAktif)
+		if (peristiwa.key === 'w' || peristiwa.key === 'W') { void sesuaikanLebar() }
+		if (peristiwa.key === 'Escape') {
+			if (modalCatatan && !modalCatatan.classList.contains('hidden')) {
+				tutupModalCatatan()
+			} else if (drawerPenanda && !drawerPenanda.classList.contains('hidden')) {
+				tutupDrawer()
+			} else if (modeFokusAktif) {
+				toggleModeFokus()
+			}
+		}
+	})
 
 	// Simpan kemajuan membaca setiap kali halaman berpindah (debounce 2 detik).
 	let timerProgres = null
@@ -572,8 +1010,6 @@ async function siapkanPembaca(wadah) {
 		}, 2000)
 	}
 
-	// Flush saat tab disembunyikan atau ditutup agar progres terakhir tidak hilang.
-	// sendBeacon tidak mendukung header CSRF, jadi dipakai fetch dengan keepalive: true.
 	document.addEventListener('visibilitychange', () => {
 		if (document.visibilityState === 'hidden' && progresTertunda) {
 			clearTimeout(timerProgres)
@@ -582,24 +1018,20 @@ async function siapkanPembaca(wadah) {
 		}
 	})
 
-	// Pasang tombol penanda bila ada di halaman.
-	pasangKlik('tombol-penanda', () => {
-		if (!data.urlPenanda) return
-		postJson(data.urlPenanda, data.csrf, { halaman: halamanAktif })
-			.then(async (res) => {
-				if (res.status === 429) {
-					if (import.meta.env.DEV) console.info('Penanda: terlalu banyak permintaan, dilewati.')
-					return
-				}
-				if (!res.ok) throw new Error(`Server menjawab ${res.status}`)
-				const hasil = await res.json()
-				pulihkanPenanda(Array.isArray(hasil.penanda) ? hasil.penanda : [])
-			})
-			.catch((galat) => console.warn('Gagal mengubah penanda:', galat))
-	})
-
+	// Prioritas halaman awal: parameter ?halaman= dari tautan penanda
+	// ("lanjut ke halaman X") menyatakan niat yang lebih spesifik daripada
+	// progres tersimpan, jadi ia menang bila keduanya ada.
+	const paramHalaman = Number.parseInt(
+		new URLSearchParams(window.location.search).get('halaman'),
+		10,
+	)
 	const halamanAwal = Math.min(
-		Math.max(1, Number.parseInt(dataAwal?.halamanTerakhir, 10) || 1),
+		Math.max(
+			1,
+			Number.isNaN(paramHalaman)
+				? Number.parseInt(dataAwal?.halamanTerakhir, 10) || 1
+				: paramHalaman,
+		),
 		dokumen.numPages,
 	)
 	const kerangkaSiap = await siapkanKerangkaHalaman()
@@ -610,7 +1042,7 @@ async function siapkanPembaca(wadah) {
 	siapkanObserverRender()
 	tampilkanStatus('')
 	pulihkanPenanda(Array.isArray(dataAwal?.penanda) ? dataAwal.penanda : [])
-	aturPanelPenanda(false)
+	pulihkanCatatan(Array.isArray(dataAwal?.catatan) ? dataAwal.catatan : [])
 	jadwalkanSinkronisasiRender()
 	const tujuanAwal = gulirKeHalaman(halamanAwal, 'auto')
 	if (tujuanAwal) {
@@ -622,10 +1054,6 @@ async function siapkanPembaca(wadah) {
 	siapSimpan = true
 }
 
-// Modul ini kini dimuat secara DINAMIS dari app.js, dan pemuatannya bisa
-// selesai setelah DOMContentLoaded terlanjur berlalu. Penangan yang dipasang
-// belakangan tidak pernah dipanggil — pembaca akan diam selamanya di tulisan
-// "Memuat berkas…". Karena itu kesiapan dokumen diperiksa, bukan ditunggu.
 const nyalakanPembaca = () => {
 	const wadah = document.getElementById('pembaca-pdf')
 	if (wadah) siapkanPembaca(wadah)

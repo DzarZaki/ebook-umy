@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Prodi;
 use App\Models\User;
+use App\Notifications\VerifikasiEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class PendaftaranKodeTest extends TestCase
@@ -33,7 +35,7 @@ class PendaftaranKodeTest extends TestCase
         $prodi = Prodi::factory()->create(['access_code' => 'PAI-2026']);
 
         $this->post('/register', $this->dataValid($prodi))
-            ->assertRedirect(route('katalog.index'));
+            ->assertRedirect(route('verification.notice'));
 
         $this->assertAuthenticated();
 
@@ -42,6 +44,7 @@ class PendaftaranKodeTest extends TestCase
             'role' => User::ROLE_MAHASISWA,
             'prodi_id' => $prodi->id,
             'is_active' => true,
+            'email_verified_at' => null,
         ]);
     }
 
@@ -96,12 +99,28 @@ class PendaftaranKodeTest extends TestCase
             ->assertSessionHasErrors('email');
     }
 
-    public function test_mahasiswa_langsung_dapat_membuka_katalog_tanpa_verifikasi_email(): void
+    public function test_mahasiswa_baru_diarahkan_ke_halaman_verifikasi_dan_belum_bisa_buka_katalog(): void
     {
         $prodi = Prodi::factory()->create();
 
+        $this->post('/register', $this->dataValid($prodi))
+            ->assertRedirect(route('verification.notice'));
+
+        // Katalog tetap terkunci sampai surelnya dikonfirmasi — diarahkan
+        // sopan ke halaman verifikasi, bukan ditolak dengan galat.
+        $this->get(route('katalog.index'))
+            ->assertRedirect(route('verification.notice'));
+    }
+
+    public function test_pendaftaran_mengirim_tautan_verifikasi(): void
+    {
+        Notification::fake();
+
+        $prodi = Prodi::factory()->create();
         $this->post('/register', $this->dataValid($prodi));
 
-        $this->get(route('katalog.index'))->assertOk();
+        $pengguna = User::where('email', 'dzar.mahasiswa@gmail.com')->firstOrFail();
+
+        Notification::assertSentTo($pengguna, VerifikasiEmail::class);
     }
 }

@@ -4,7 +4,9 @@ use App\Http\Controllers\Admin\BukuController;
 use App\Http\Controllers\Admin\KategoriController;
 use App\Http\Controllers\Admin\KodeAksesController;
 use App\Http\Controllers\Admin\MahasiswaController;
+use App\Http\Controllers\Admin\PengaturanBacaController;
 use App\Http\Controllers\Admin\PengaturanUnduhController;
+use App\Http\Controllers\Admin\ProfilDosenController;
 use App\Http\Controllers\Admin\SampahBukuController;
 use App\Http\Controllers\Admin\StatistikController;
 use App\Http\Controllers\BacaController;
@@ -17,19 +19,36 @@ use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardCo
 use App\Http\Controllers\SuperAdmin\DosenController;
 use App\Http\Controllers\SuperAdmin\ProdiController;
 use App\Http\Controllers\UnduhController;
+use App\Models\LecturerProfile;
 use App\Models\Prodi;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    // Halaman publik: hasilnya jarang berubah, jadi disinggahkan 10 menit dan
-    // dibatasi jumlahnya. Prodi baru muncul paling lambat 10 menit kemudian.
+    // Halaman publik: hasilnya jarang berubah, jadi disinggahkan 10 menit
     $daftarProdi = cache()->remember(
         'beranda.daftar-prodi',
         now()->addMinutes(10),
         fn () => Prodi::orderBy('name')->limit(60)->get()
     );
 
-    return view('welcome', ['daftarProdi' => $daftarProdi]);
+    /*
+     * Semua dosen yang menyalakan penampilan profilnya — bukan satu saja,
+     * karena tabel lecturer_profiles memang dirancang untuk banyak pemilik.
+     * Yang terbaru disunting tampil paling awal.
+     */
+    $daftarProfilDosen = cache()->remember(
+        'beranda.daftar-profil-dosen',
+        now()->addMinutes(10),
+        fn () => LecturerProfile::with('user.prodi')
+            ->where('is_displayed', true)
+            ->latest('updated_at')
+            ->get()
+    );
+
+    return view('welcome', [
+        'daftarProdi' => $daftarProdi,
+        'daftarProfilDosen' => $daftarProfilDosen,
+    ]);
 })->name('beranda');
 
 // Pintu masuk tunggal — dialihkan sesuai peran pengguna.
@@ -67,7 +86,7 @@ Route::middleware(['auth', 'active', 'role:superadmin'])
 | Katalog (dapat diakses semua pengguna yang sudah masuk)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'active'])->group(function () {
+Route::middleware(['auth', 'active', 'verified'])->group(function () {
     /*
      * Beranda pribadi: lanjutkan membaca, buku tersimpan, bacaan terbaru.
      *
@@ -95,10 +114,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->name('katalog.unduh')
         ->middleware('throttle:unduh-buku');
 
-    // Kemajuan membaca dan penanda halaman, dipanggil dari penampil PDF.
+    // Kemajuan membaca, penanda halaman, dan catatan belajar.
     Route::get('/katalog/{buku}/data-baca', [BacaController::class, 'dataBaca'])->name('katalog.data-baca');
     Route::post('/katalog/{buku}/progres', [BacaController::class, 'simpanProgres'])->name('katalog.progres')->middleware('throttle:60,1');
     Route::post('/katalog/{buku}/penanda', [BacaController::class, 'ubahPenanda'])->name('katalog.penanda')->middleware('throttle:60,1');
+    Route::post('/katalog/{buku}/catatan', [BacaController::class, 'simpanCatatan'])->name('katalog.catatan.simpan')->middleware('throttle:60,1');
+    Route::delete('/katalog/{buku}/catatan', [BacaController::class, 'hapusCatatan'])->name('katalog.catatan.hapus')->middleware('throttle:60,1');
 
     /*
      * Koleksi Saya — buku yang sengaja disimpan mahasiswa.
@@ -138,6 +159,11 @@ Route::middleware(['auth', 'active', 'role:admin'])
             ->except(['show'])
             ->parameters(['buku' => 'buku']);
 
+        // Menerbitkan / menarik terbit dari halaman daftar, tanpa membuka
+        // formulir sunting. Nilainya keadaan tujuan, bukan perintah balik.
+        Route::patch('buku/{buku}/terbit', [BukuController::class, 'terbitkan'])
+            ->name('buku.terbit');
+
         /*
          * Tempat sampah buku.
          *
@@ -159,13 +185,21 @@ Route::middleware(['auth', 'active', 'role:admin'])
         Route::patch('/pengaturan-unduh', [PengaturanUnduhController::class, 'update'])
             ->name('pengaturan-unduh.update');
 
+        Route::patch('/pengaturan-baca', [PengaturanBacaController::class, 'update'])
+            ->name('pengaturan-baca.update');
+
         Route::get('/statistik', StatistikController::class)->name('statistik');
 
         // Kode akses pendaftaran mahasiswa
         Route::patch('kode-akses', [KodeAksesController::class, 'update'])
             ->name('kode-akses.update');
 
-                /*
+        // Profil & Personal Branding Dosen
+        Route::get('profil-dosen', [ProfilDosenController::class, 'edit'])->name('profil-dosen.edit');
+        Route::put('profil-dosen', [ProfilDosenController::class, 'update'])->name('profil-dosen.update');
+        Route::delete('profil-dosen/foto', [ProfilDosenController::class, 'hapusFoto'])->name('profil-dosen.hapus-foto');
+
+        /*
          * Pengelolaan akun mahasiswa.
          *
          * Urutan pendaftaran disengaja: `mahasiswa/{mahasiswa}/edit` didaftarkan

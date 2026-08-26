@@ -1,15 +1,15 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-display text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">
+        <h1 class="font-display text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">
             Statistik &middot; {{ auth()->user()->prodi?->name }}
-        </h2>
+        </h1>
     </x-slot>
 
     <div class="py-10">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
             {{-- Angka ringkas --}}
-            <div class="grid gap-px border border-netral-200 dark:border-arang-600 bg-netral-200 dark:bg-arang-600 sm:grid-cols-2 lg:grid-cols-4 rounded-lg overflow-hidden shadow-sm dark:shadow-none transition-colors">
+            <div class="grid gap-px border border-netral-200 dark:border-arang-600 bg-netral-200 dark:bg-arang-600 sm:grid-cols-2 lg:grid-cols-5 rounded-lg overflow-hidden shadow-sm dark:shadow-none transition-colors">
                 <div class="bg-white dark:bg-arang-700/80 p-5">
                     <p class="text-sm text-netral-500 dark:text-netral-400">Total unduhan</p>
                     <p class="mt-1 font-display text-3xl font-semibold text-netral-900 dark:text-netral-50">{{ $totalUnduhan }}</p>
@@ -21,6 +21,10 @@
                 <div class="bg-white dark:bg-arang-700/80 p-5">
                     <p class="text-sm text-netral-500 dark:text-netral-400">Mahasiswa pengunduh</p>
                     <p class="mt-1 font-display text-3xl font-semibold text-netral-900 dark:text-netral-50">{{ $pengunduhUnik }}</p>
+                </div>
+                <div class="bg-white dark:bg-arang-700/80 p-5">
+                    <p class="text-sm text-netral-500 dark:text-netral-400">Disimpan ke koleksi</p>
+                    <p class="mt-1 font-display text-3xl font-semibold text-netral-900 dark:text-netral-50">{{ $totalPenyimpanan }}</p>
                 </div>
                 <div class="bg-white dark:bg-arang-700/80 p-5">
                     <p class="text-sm text-netral-500 dark:text-netral-400">Mahasiswa terdaftar</p>
@@ -54,7 +58,7 @@
                 </div>
             </div>
 
-            <div class="mt-8 grid gap-6 lg:grid-cols-2">
+            <div class="mt-8 grid gap-6 lg:grid-cols-3">
 
                 {{-- Buku terpopuler --}}
                 <div class="border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700/60 rounded-lg overflow-hidden shadow-sm dark:shadow-none transition-colors">
@@ -76,6 +80,30 @@
                             </li>
                         @empty
                             <li class="px-5 py-10 text-center text-sm text-netral-500 dark:text-netral-400">Belum ada unduhan tercatat.</li>
+                        @endforelse
+                    </ol>
+                </div>
+
+                {{-- Buku paling banyak disimpan --}}
+                <div class="border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700/60 rounded-lg overflow-hidden shadow-sm dark:shadow-none transition-colors">
+                    <h3 class="border-b border-netral-200 dark:border-arang-600 px-5 py-4 font-display text-lg font-semibold text-netral-900 dark:text-netral-50">
+                        Paling banyak disimpan
+                    </h3>
+
+                    <ol class="divide-y divide-netral-200 dark:divide-arang-600">
+                        @forelse ($bukuTersimpanTerbanyak as $urutan => $buku)
+                            <li class="flex items-center gap-4 px-5 py-3">
+                                <span class="w-6 shrink-0 font-display text-lg text-netral-400">{{ $urutan + 1 }}</span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-netral-900 dark:text-netral-50">{{ $buku->title }}</p>
+                                    <p class="text-xs text-netral-500 dark:text-netral-400">{{ $buku->prodi?->name ?? 'Umum' }}</p>
+                                </div>
+                                <span class="shrink-0 rounded bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                    {{ $buku->tersimpan_oleh_count }}&times;
+                                </span>
+                            </li>
+                        @empty
+                            <li class="px-5 py-10 text-center text-sm text-netral-500 dark:text-netral-400">Belum ada buku yang disimpan mahasiswa.</li>
                         @endforelse
                     </ol>
                 </div>

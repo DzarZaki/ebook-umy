@@ -24,9 +24,7 @@ use RuntimeException;
 class PembuatStempel
 {
     /** @param  array<string, mixed>  $pengaturan */
-    public function __construct(private readonly array $pengaturan)
-    {
-    }
+    public function __construct(private readonly array $pengaturan) {}
 
     /** Membuat instance memakai nilai dari config/ebook.php. */
     public static function dariKonfigurasi(): self
@@ -34,7 +32,7 @@ class PembuatStempel
         return new self((array) config('ebook.watermark', []));
     }
 
-        /**
+    /**
      * Menyusun kalimat stempel untuk seorang pengguna.
      *
      * Dipisah sebagai method sendiri agar susunan kalimatnya bisa diuji
@@ -56,7 +54,7 @@ class PembuatStempel
         );
     }
 
-        /**
+    /**
      * Membuat berkas stempel untuk seorang pengguna.
      *
      * @return string Jalur absolut berkas stempel yang dihasilkan.
@@ -88,7 +86,8 @@ class PembuatStempel
         $tinggi = $this->angka('tinggi_halaman', 297.0);
         $jarakKiri = $this->angka('jarak_kiri', 12.0);
         $jarakBawah = $this->angka('jarak_bawah', 7.0);
-        $ukuranFont = $this->angka('ukuran_font', 7.5);
+        $jarakAtas = $this->angka('jarak_atas', 7.0);
+        $ukuranFont = $this->angka('ukuran_font', 9.0);
         $font = (string) ($this->pengaturan['font'] ?? 'Helvetica');
 
         $this->siapkanFolder($jalurTujuan);
@@ -117,8 +116,11 @@ class PembuatStempel
         [$merah, $hijau, $biru] = $this->warna();
         $pdf->SetTextColor($merah, $hijau, $biru);
 
-        $pdf->SetXY($jarakKiri, $tinggi - $jarakBawah);
-        $pdf->Cell(0.0, 4.0, $teksAman, 0, 0, 'L');
+        // Dua baris identitas per halaman — kaki dan kepala. Satu baris di
+        // strip bawah mati oleh pemangkasan sepuluh milimeter; pasangan ini
+        // membuat upaya menghilangkan jejak justru memotong isi halaman.
+        $this->gambarBaris($pdf, $teksAman, $jarakKiri, $tinggi - $jarakBawah);
+        $this->gambarBaris($pdf, $teksAman, $jarakKiri, $jarakAtas);
 
         // 'F' berarti tulis ke berkas, bukan kirim ke browser.
         $pdf->Output('F', $jalurTujuan);
@@ -137,7 +139,18 @@ class PembuatStempel
      * penyesuaian ini, nama ber-aksen atau tanda kutip melengkung akan
      * tampil sebagai karakter acak pada stempel.
      */
-        /**
+    /**
+     * Menggambar satu baris identitas pada posisi tegak yang ditentukan.
+     *
+     * Tinggi sel 4 mm dipilih cukup untuk huruf 9 pt tanpa tersentuh tepi.
+     */
+    private function gambarBaris(\FPDF $pdf, string $teksAman, float $jarakKiri, float $posisiY): void
+    {
+        $pdf->SetXY($jarakKiri, $posisiY);
+        $pdf->Cell(0.0, 4.0, $teksAman, 0, 0, 'L');
+    }
+
+    /**
      * Menyesuaikan teks dengan keterbatasan font bawaan FPDF.
      *
      * Font inti PDF memakai pengkodean Windows-1252, bukan UTF-8, sehingga

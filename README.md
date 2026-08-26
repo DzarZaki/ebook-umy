@@ -16,3 +16,10 @@ composer install
 npm install
 cp .env.example .env
 php artisan key:generate
+```
+
+## Rilis ke produksi
+
+Ikuti **`CHECKLIST-PRODUKSI.md`** — mencakup prasyarat SMTP (verifikasi email
+kini menegakkan akses mahasiswa), qpdf, worker antrean notifikasi, penjadwal
+pembersih berkas, dan uji terima sebelum umum.

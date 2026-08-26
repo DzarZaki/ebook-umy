@@ -14,6 +14,14 @@ class UpdateProdiRequest extends FormRequest
         return $this->user()?->isSuperAdmin() ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        // Alasan sama dengan StoreProdiRequest: rapikan sebelum uji unik.
+        $this->merge([
+            'name' => trim((string) preg_replace('/\s+/u', ' ', (string) $this->input('name'))),
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */

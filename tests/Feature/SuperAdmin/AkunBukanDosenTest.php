@@ -37,7 +37,7 @@ class AkunBukanDosenTest extends TestCase
         $this->actingAs($this->superAdmin())
             ->put(route('superadmin.dosen.update', $mahasiswa), [
                 'name' => 'Nama Disusupi',
-                'email' => 'penyusup@umy.ac.id',
+                'email' => 'penyusup@gmail.com',
                 'prodi_id' => $prodiLain->id,
                 'is_active' => 0,
             ])

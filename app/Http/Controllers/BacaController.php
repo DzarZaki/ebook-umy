@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Models\Bookmark;
+use App\Models\PageNote;
 use App\Models\ReadingProgress;
 use App\Services\BerkasBukuService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -39,8 +40,7 @@ class BacaController extends Controller
 
     public function __construct(
         private readonly BerkasBukuService $berkasBuku,
-    ) {
-    }
+    ) {}
 
     /**
      * Menampilkan penampil PDF beserta aturan unduh yang berlaku.
@@ -55,7 +55,7 @@ class BacaController extends Controller
         ]);
     }
 
-        /**
+    /**
      * Menyalurkan berkas PDF untuk dibaca di penampil.
      *
      * Berkas dialirkan langsung dari penyimpanan privat dan tidak pernah
@@ -64,8 +64,8 @@ class BacaController extends Controller
      *
      * Yang keluar dari sini BUKAN lagi selalu dokumen asli. Untuk buku yang
      * tidak bermode "unduh penuh", service menyalurkan salinan berstempel
-     * identitas pembaca — dan, bila ebook.baca.ikuti_rentang dinyalakan,
-     * salinan yang sudah dipotong sesuai rentang halaman.
+     * identitas pembaca — dan, bila kebijakan prodi mengikutsertakan
+     * rentang halaman, salinan yang sudah dipotong sesuai rentang itu.
      *
      * Alasannya sederhana: berkas yang sampai ke browser selalu dapat
      * disimpan pengguna. Selama endpoint ini menyerahkan dokumen asli utuh,
@@ -101,7 +101,7 @@ class BacaController extends Controller
         ]);
     }
 
-    /** Mengirim kemajuan membaca dan daftar penanda milik pengguna untuk buku ini. */
+    /** Mengirim kemajuan membaca, daftar penanda, dan catatan milik pengguna untuk buku ini. */
     public function dataBaca(Request $permintaan, Book $buku): JsonResponse
     {
         $this->pastikanBolehMembaca($buku);
@@ -115,10 +115,108 @@ class BacaController extends Controller
         $limit = $this->resolusiLimit($permintaan);
         $penanda = $this->daftarPenanda($pengguna->id, $buku->id, $limit);
 
+        $catatan = PageNote::where('user_id', $pengguna->id)
+            ->where('book_id', $buku->id)
+            ->orderBy('page')
+            ->get(['id', 'page', 'content', 'updated_at'])
+            ->map(fn ($n) => [
+                'id' => $n->id,
+                'halaman' => $n->page,
+                'isi' => $n->content,
+                'waktu' => $n->updated_at?->diffForHumans() ?? '',
+            ]);
+
         return response()->json([
             'halamanTerakhir' => $progres?->last_page ?? 1,
             'penanda' => $penanda,
             'penanda_total' => count($penanda),
+            'catatan' => $catatan,
+            'catatan_total' => $catatan->count(),
+        ]);
+    }
+
+    /** Menyimpan atau memperbarui catatan pada suatu halaman. */
+    public function simpanCatatan(Request $permintaan, Book $buku): JsonResponse
+    {
+        $this->pastikanBolehMembaca($buku);
+
+        $pengguna = $permintaan->user();
+        $batas = $this->batasHalaman($buku);
+
+        $data = $permintaan->validate([
+            'halaman' => ['required', 'integer', 'min:1', 'max:'.$batas],
+            'isi' => ['required', 'string', 'max:5000'],
+        ], [
+            'halaman.max' => "Buku ini hanya memiliki {$batas} halaman.",
+            'isi.required' => 'Isi catatan tidak boleh kosong.',
+        ]);
+
+        $catatan = PageNote::updateOrCreate(
+            [
+                'user_id' => $pengguna->id,
+                'book_id' => $buku->id,
+                'page' => $data['halaman'],
+            ],
+            [
+                'content' => $data['isi'],
+            ]
+        );
+
+        $daftarCatatan = PageNote::where('user_id', $pengguna->id)
+            ->where('book_id', $buku->id)
+            ->orderBy('page')
+            ->get(['id', 'page', 'content', 'updated_at'])
+            ->map(fn ($n) => [
+                'id' => $n->id,
+                'halaman' => $n->page,
+                'isi' => $n->content,
+                'waktu' => $n->updated_at?->diffForHumans() ?? '',
+            ]);
+
+        return response()->json([
+            'status' => 'tersimpan',
+            'catatan' => $daftarCatatan,
+            'catatan_total' => $daftarCatatan->count(),
+            'catatan_aktif' => [
+                'halaman' => $catatan->page,
+                'isi' => $catatan->content,
+                'waktu' => $catatan->updated_at?->diffForHumans() ?? '',
+            ],
+        ]);
+    }
+
+    /** Menghapus catatan pada halaman tertentu. */
+    public function hapusCatatan(Request $permintaan, Book $buku): JsonResponse
+    {
+        $this->pastikanBolehMembaca($buku);
+
+        $pengguna = $permintaan->user();
+        $batas = $this->batasHalaman($buku);
+
+        $data = $permintaan->validate([
+            'halaman' => ['required', 'integer', 'min:1', 'max:'.$batas],
+        ]);
+
+        PageNote::where('user_id', $pengguna->id)
+            ->where('book_id', $buku->id)
+            ->where('page', $data['halaman'])
+            ->delete();
+
+        $daftarCatatan = PageNote::where('user_id', $pengguna->id)
+            ->where('book_id', $buku->id)
+            ->orderBy('page')
+            ->get(['id', 'page', 'content', 'updated_at'])
+            ->map(fn ($n) => [
+                'id' => $n->id,
+                'halaman' => $n->page,
+                'isi' => $n->content,
+                'waktu' => $n->updated_at?->diffForHumans() ?? '',
+            ]);
+
+        return response()->json([
+            'status' => 'terhapus',
+            'catatan' => $daftarCatatan,
+            'catatan_total' => $daftarCatatan->count(),
         ]);
     }
 

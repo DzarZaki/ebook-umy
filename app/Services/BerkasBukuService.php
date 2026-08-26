@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Book;
+use App\Models\Prodi;
 use App\Models\User;
 use App\Support\Pdf\PembuatStempel;
 use App\Support\Pdf\Qpdf;
@@ -43,8 +44,7 @@ class BerkasBukuService
     public function __construct(
         private readonly Qpdf $qpdf,
         private readonly PembuatStempel $pembuatStempel,
-    ) {
-    }
+    ) {}
 
     /**
      * Menyiapkan berkas buku untuk dibaca di penampil.
@@ -56,7 +56,7 @@ class BerkasBukuService
      * @return array{disk: string, jalur: string}
      *
      * @throws AuthorizationException bila pengguna tidak berhak membaca
-     * @throws RuntimeException       bila rentang halaman wajib ditegakkan tetapi gagal
+     * @throws RuntimeException bila rentang halaman wajib ditegakkan tetapi gagal
      */
     public function siapkanBacaan(Book $buku, User $pembaca): array
     {
@@ -76,14 +76,15 @@ class BerkasBukuService
 
         // Dihitung di luar try: bila pengaturan rentangnya sendiri yang tidak
         // sah, itu galat konfigurasi buku, bukan kegagalan pengolahan.
-        $rentang = $this->rentangBacaan($buku);
+        $rentang = $this->rentangBacaan($buku, $pembaca);
+        $stempelAktif = $this->stempelBacaanAktif($buku, $pembaca);
 
-        if ($rentang === null && ! $this->stempelBacaanAktif()) {
+        if ($rentang === null && ! $stempelAktif) {
             return $bawaan;
         }
 
         try {
-            $siap = $this->bacaanTerolah($buku, $pembaca, $relatif, $rentang);
+            $siap = $this->bacaanTerolah($buku, $pembaca, $relatif, $rentang, $stempelAktif);
 
             if ($siap !== null) {
                 return ['disk' => $this->namaDiskSementara(), 'jalur' => $siap];
@@ -129,12 +130,12 @@ class BerkasBukuService
      * Menyiapkan berkas unduhan sesuai hak pengguna.
      *
      * @return array{jalur: string, namaBerkas: string, sementara: bool}
-     *         jalur      : jalur absolut berkas yang siap dikirim
-     *         namaBerkas : nama berkas yang dilihat pengguna
-     *         sementara  : true bila berkas wajib dihapus setelah terkirim
+     *                                                                   jalur      : jalur absolut berkas yang siap dikirim
+     *                                                                   namaBerkas : nama berkas yang dilihat pengguna
+     *                                                                   sementara  : true bila berkas wajib dihapus setelah terkirim
      *
      * @throws AuthorizationException bila pengguna tidak berhak mengunduh
-     * @throws RuntimeException       bila berkas gagal diolah
+     * @throws RuntimeException bila berkas gagal diolah
      */
     public function siapkanUnduhan(Book $buku, User $pengguna): array
     {
@@ -246,16 +247,19 @@ class BerkasBukuService
      * dan memanggil qpdf pada setiap permintaan akan melumpuhkan server.
      *
      * @param  array{int, int}|null  $rentang
+     * @param  bool  $stempelAktif  keputusan kebijakan prodi; ikut masuk kunci
+     *                              cache agar pergantian sakelar tidak pernah
+     *                              menyajikan berkas sisa keadaan lama
      * @return string|null Jalur relatif pada disk sementara, atau null bila
      *                     tidak ada yang bisa diolah dan berkas asli boleh dipakai.
      */
-    private function bacaanTerolah(Book $buku, User $pembaca, string $relatifAsli, ?array $rentang): ?string
+    private function bacaanTerolah(Book $buku, User $pembaca, string $relatifAsli, ?array $rentang, bool $stempelAktif): ?string
     {
         $disk = $this->diskSementara();
         $folder = $this->folderBacaan();
         $asli = $this->diskBuku()->path($relatifAsli);
 
-        $kunci = $this->kunciBacaan($buku, $pembaca, $asli, $rentang);
+        $kunci = $this->kunciBacaan($buku, $pembaca, $asli, $rentang, $stempelAktif);
         $tujuan = "{$folder}/{$kunci}.pdf";
 
         // Masih hangat di cache: tidak perlu memanggil qpdf sama sekali.
@@ -300,22 +304,25 @@ class BerkasBukuService
                 $kerja = $potong;
             }
 
-            $stempel = $disk->path("{$folder}/{$kunci}-{$penanda}-stempel.pdf");
-            $this->pembuatStempel->untukPengguna($pembaca, $stempel, null, 'Dibaca oleh');
-            $antara[] = $stempel;
+            if ($stempelAktif) {
+                $stempel = $disk->path("{$folder}/{$kunci}-{$penanda}-stempel.pdf");
+                $this->pembuatStempel->untukPengguna($pembaca, $stempel, null, 'Dibaca oleh');
+                $antara[] = $stempel;
 
-            $hasil = $disk->path("{$folder}/{$kunci}-{$penanda}-hasil.pdf");
-            $this->qpdf->tempelStempel($kerja, $stempel, $hasil);
-            $antara[] = $hasil;
+                $hasil = $disk->path("{$folder}/{$kunci}-{$penanda}-hasil.pdf");
+                $this->qpdf->tempelStempel($kerja, $stempel, $hasil);
+                $antara[] = $hasil;
+                $kerja = $hasil;
+            }
 
             // Dipindahkan lewat rename, bukan disalin: berkas cache baru
             // muncul dalam keadaan lengkap, sehingga permintaan lain yang
             // datang bersamaan tidak pernah menemukan berkas setengah jadi.
-            if (! @rename($hasil, $disk->path($tujuan))) {
+            if (! @rename($kerja, $disk->path($tujuan))) {
                 throw new RuntimeException('Berkas bacaan gagal dipindahkan ke folder simpanan.');
             }
 
-            $this->hapus(array_filter($antara, static fn (string $jalur): bool => $jalur !== $hasil));
+            $this->hapus(array_filter($antara, static fn (string $jalur): bool => $jalur !== $kerja));
 
             return $tujuan;
         } catch (Throwable $galat) {
@@ -330,18 +337,26 @@ class BerkasBukuService
      * dibaca apa adanya.
      *
      * Bawaannya null walau bukunya bermode "sebagian", karena rentang pada
-     * kolom download_page_* menyatakan batas UNDUH. Kampus yang memaknainya
-     * sebagai batas baca cukup menyalakan ebook.baca.ikuti_rentang.
+     * kolom download_page_* menyatakan batas UNDUH. Prodi yang memaknainya
+     * sebagai batas baca dapat menyalakan sakelar "ikuti rentang" miliknya;
+     * konfigurasi ebook.baca.ikuti_rentang tinggal penengah untuk pembaca
+     * yang tidak terikat prodi mana pun.
      *
      * @return array{int, int}|null
      */
-    private function rentangBacaan(Book $buku): ?array
+    private function rentangBacaan(Book $buku, User $pembaca): ?array
     {
         if ($buku->access_mode !== Book::AKSES_SEBAGIAN) {
             return null;
         }
 
-        if (! (bool) config('ebook.baca.ikuti_rentang', false)) {
+        $prodi = $this->prodiPenentuKebijakan($buku, $pembaca);
+
+        $ikutiRentang = $prodi !== null
+            ? $prodi->baca_ikuti_rentang
+            : (bool) config('ebook.baca.ikuti_rentang', false);
+
+        if (! $ikutiRentang) {
             return null;
         }
 
@@ -373,9 +388,26 @@ class BerkasBukuService
         return [$awal, $akhir];
     }
 
-    private function stempelBacaanAktif(): bool
+    /**
+     * Prodi yang kebijakannya berlaku atas pasangan buku–pembaca ini.
+     *
+     * Buku prodi mengikuti aturan prodinya sendiri; buku umum mengikuti
+     * prodi pembacanya — sama persis dengan penentu aturan unduh di
+     * Book::aturanUnduhUntuk(), supaya satu pertanyaan tidak punya dua
+     * jawaban tergantung jalurnya lewat mana.
+     */
+    private function prodiPenentuKebijakan(Book $buku, User $pembaca): ?Prodi
     {
-        return (bool) config('ebook.baca.stempel', true);
+        return $buku->prodi ?? $pembaca->prodi;
+    }
+
+    private function stempelBacaanAktif(Book $buku, User $pembaca): bool
+    {
+        $prodi = $this->prodiPenentuKebijakan($buku, $pembaca);
+
+        return $prodi !== null
+            ? $prodi->baca_stempel
+            : (bool) config('ebook.baca.stempel', true);
     }
 
     /**
@@ -386,8 +418,9 @@ class BerkasBukuService
      * lama, yang kedua supaya tanggal pada stempel tetap jujur.
      *
      * @param  array{int, int}|null  $rentang
+     * @param  bool  $stempelAktif  keadaan sakelar saat berkas diolah
      */
-    private function kunciBacaan(Book $buku, User $pembaca, string $jalurAsli, ?array $rentang): string
+    private function kunciBacaan(Book $buku, User $pembaca, string $jalurAsli, ?array $rentang, bool $stempelAktif): string
     {
         return sha1(implode('|', [
             (string) $buku->getKey(),
@@ -395,6 +428,7 @@ class BerkasBukuService
             (string) (@filemtime($jalurAsli) ?: 0),
             (string) $pembaca->getKey(),
             $rentang === null ? 'utuh' : "{$rentang[0]}-{$rentang[1]}",
+            $stempelAktif ? 'berstempel' : 'polos',
             Carbon::now()->toDateString(),
         ]));
     }

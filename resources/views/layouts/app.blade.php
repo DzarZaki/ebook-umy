@@ -24,7 +24,7 @@
 
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
     <link rel="manifest" href="/manifest.webmanifest">
-    <meta name="theme-color" content="#101113">
+    <meta name="theme-color" content="#0B0E14">
     <link rel="apple-touch-icon" href="/images/icon-192.png">
 
     <link rel="preconnect" href="https://fonts.bunny.net">

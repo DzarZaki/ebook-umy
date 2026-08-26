@@ -9,14 +9,17 @@
 
 @php
     /**
-     * Ketebalan dari jumlah halaman.
+     * Ketebalan dari jumlah halaman memakai kurva akar.
      *
-     * Buku 242 halaman menjadi 30 px, buku 50 halaman menjadi 9 px.
-     * Batas bawah 9 px dijaga supaya buku tipis tetap terlihat sebagai
-     * benda, bukan sebagai kartu. Batas atas 44 px dijaga supaya buku
-     * seribu halaman tidak berubah menjadi balok.
+     * Skala linier membuat buku bersaldo halaman kecil berdesakan di lantai
+     * batas — 16 dan 48 halaman tak bisa dibedakan. Kurva akar memberi
+     * jarak yang terasa pada ujung tipis tanpa menjadikan buku tebal sebuah
+     * balok: 24 hal → ±12 px, 100 hal → ±21 px, 250 hal → ±30 px, dan
+     * buku raksasa berhenti di 40 px. Batas bawah 9 px dijaga supaya buku
+     * paling tipis tetap menampakkan lembarannya saat membalik, bukan
+     * menyusut menjadi kartu.
      */
-    $tebal = $tebalPaksa ?? max(9, min(44, (int) round(($buku->page_count ?: 60) / 8)));
+    $tebal = $tebalPaksa ?? max(9, min(40, (int) round(6 + sqrt((float) ($buku->page_count ?: 60)) * 1.5)));
 
     /**
      * Warna punggung yang tetap untuk setiap buku.

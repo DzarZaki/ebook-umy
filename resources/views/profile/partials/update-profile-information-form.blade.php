@@ -44,6 +44,21 @@
     </div>
 @endif
 
+        {{-- Langganan pemberitahuan buku baru — hanya bermakna bagi mahasiswa. --}}
+        @if ($user->isMahasiswa())
+            <div class="flex items-start gap-3">
+                <input id="notifikasi_buku_baru" name="notifikasi_buku_baru" type="checkbox" value="1"
+                       class="mt-1 rounded border-netral-300 dark:border-arang-500 bg-white dark:bg-arang-700 text-jingga-600 focus:ring-jingga-500"
+                       @checked(old('notifikasi_buku_baru', $user->notifikasi_buku_baru)) />
+                <label for="notifikasi_buku_baru" class="text-sm leading-relaxed text-netral-600 dark:text-netral-300">
+                    Kirimi saya surel saat ada buku baru di program studi saya
+                    <span class="mt-0.5 block text-xs text-netral-500 dark:text-netral-400">
+                        Satu surel per buku yang diterbitkan. Dapat dimatikan kapan saja dari halaman ini.
+                    </span>
+                </label>
+            </div>
+        @endif
+
         <div class="flex items-center gap-4">
             <x-primary-button>Simpan</x-primary-button>
 

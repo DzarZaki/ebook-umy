@@ -62,11 +62,13 @@
     transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Rotasi Y positif membawa tepi kiri ke arah penonton, sehingga
-   punggung buku terlihat. Nilai negatif akan menyembunyikannya. */
+/* Rotasi Y positif membawa tepi kiri ke arah penonton (punggung tampak).
+   Saat kursor menyentuh, buku justru MEMBALIK ke arah negatif sehingga
+   sisi kanannya — tumpukan lembaran — yang menghadap pembaca. Dari sinilah
+   ketebalan sebuah buku terbaca: tipis tetap ramping, tebal tampak gemuk. */
 .group:hover .buku3d,
 .buku3d:focus-within {
-    transform: rotateY(26deg) rotateX(0deg) translateY(-0.5rem) scale(1.02);
+    transform: rotateY(-34deg) rotateX(0deg) translateY(-0.5rem) scale(1.02);
 }
 
 /* Sampul depan */
@@ -142,25 +144,45 @@
     backface-visibility: hidden;
 }
 
-/* Tumpukan kertas di sisi kanan: garis-garis halus, bukan warna rata */
+/* Tumpukan kertas di sisi kanan. Konstruksinya SAMA PERSIS dengan
+   punggung — berengsel pada tepinya sendiri lalu diputar +90° menjorok
+   ke belakang — hanya dipindah ke tepi kanan. Versi lama memakai rotasi
+   cermin (-90°) yang wajah depannya menghadap ke dalam buku; begitu
+   buku membalik ke kanan, backface-visibility melahapnya dan lembaran
+   lenyap sama sekali. */
 .buku3d__kertas {
     position: absolute;
     top: 1.5%;
-    right: 0;
+    left: 100%;
     height: 97%;
     width: var(--tebal, 20px);
-    transform-origin: right center;
-    transform: rotateY(-90deg);
+    transform-origin: left center;
+    transform: rotateY(90deg);
     border-radius: 0 2px 2px 0;
-    background:
+    /* Warna dasar di bawah gradasi: celah antipiksel tak pernah transparan.
+       Dipakai lewat background-IMAGE agar tidak ditimpa shorthand. */
+    background-color: #efeadd;
+    background-image:
+        /* Celah antar tanda tangan (signature): garis redup setiap beberapa
+           lembar, sehingga tepinya terbaca sebagai ikatan kertas betul. */
+        repeating-linear-gradient(
+            to right,
+            rgba(37, 27, 18, 0) 0px,
+            rgba(37, 27, 18, 0) 5px,
+            rgba(37, 27, 18, 0.16) 5px,
+            rgba(37, 27, 18, 0.16) 6px
+        ),
+        /* Lembaran halus satu per satu. */
         repeating-linear-gradient(
             to right,
             #faf8f3 0px,
             #faf8f3 1px,
-            #e5e0d6 1px,
-            #e5e0d6 2px
+            #e7e2d8 1px,
+            #e7e2d8 2px
         );
-    backface-visibility: hidden;
+    /* Tepi belakang sedikit tenggelam dalam bayangan: prisma rata berubah
+       menjadi tumpukan yang punya kedalaman. */
+    box-shadow: inset -7px 0 9px -5px rgba(37, 27, 18, 0.38);
 }
 
 /* Bayangan di meja. Melebar dan melunak saat buku terangkat. */
@@ -949,18 +971,22 @@ body::after {
 
 /* Category badge dengan subtle hover */
 .badge-category {
-	transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
+	transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .badge-category:hover {
 	transform: translateY(-1px);
-	border-color: #B85C38;
+	border-color: #B34E28;
+}
+
+.dark .badge-category:hover {
+	border-color: #E06A3B;
 }
 
 /* List item modern dengan subtle accent bar */
 .list-item-modern {
 	position: relative;
-	transition: all 280ms cubic-bezier(0.16, 1, 0.3, 1);
+	transition: background-color 200ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .list-item-modern::before {
@@ -970,10 +996,14 @@ body::after {
 	top: 0;
 	bottom: 0;
 	width: 3px;
-	background: #B85C38;
+	background: #B34E28;
 	opacity: 0;
 	transform: scaleY(0);
-	transition: all 280ms cubic-bezier(0.16, 1, 0.3, 1);
+	transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), opacity 250ms ease;
+}
+
+.dark .list-item-modern::before {
+	background: #E06A3B;
 }
 
 .list-item-modern:hover::before {
@@ -982,8 +1012,11 @@ body::after {
 }
 
 .list-item-modern:hover {
-	background: rgba(26, 29, 38, 0.4);
-	transform: translateX(4px);
+	background-color: rgba(37, 27, 18, 0.03);
+}
+
+.dark .list-item-modern:hover {
+	background-color: rgba(255, 255, 255, 0.03);
 }
 
 /* Respect reduced motion */

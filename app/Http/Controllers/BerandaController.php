@@ -13,11 +13,12 @@ use Illuminate\View\View;
 /**
  * Beranda pengguna yang sudah masuk — rak pribadi, bukan katalog.
  *
- * Tiga bagian, disusun dari yang paling mendesak bagi mahasiswa:
+ * Bagian-bagian disusun dari yang paling mendesak bagi mahasiswa:
  *
  *  1. Lanjutkan membaca — buku yang sedang dibaca, beserta posisinya
- *  2. Tersimpan — buku yang sengaja disimpan untuk nanti
- *  3. Baru ditambahkan — bacaan terbaru dari dosen
+ *  2. Sedang ramai — koleksi terhangat prodi pekan ini (bukti sosial)
+ *  3. Tersimpan — buku yang sengaja disimpan untuk nanti
+ *  4. Baru ditambahkan — bacaan terbaru dari dosen
  *
  * Bagian yang kosong tidak digambar sama sekali oleh tampilannya, supaya
  * beranda mahasiswa baru tidak berisi tiga kotak hampa.
@@ -31,12 +32,15 @@ class BerandaController extends Controller
 
     private const BATAS_TERBARU = 8;
 
+    private const BATAS_RAMAI = 6;
+
     public function __invoke(Request $permintaan): View
     {
         $pengguna = $permintaan->user();
 
         return view('beranda.index', [
             'lanjutkan' => $this->lanjutkanMembaca($pengguna->id, $pengguna->prodi_id, $pengguna),
+            'ramai' => $this->sedangRamai($pengguna),
             'tersimpan' => $pengguna->bukuTersimpan()
                 ->terbit()
                 ->terlihatOleh($pengguna->prodi_id)
@@ -112,6 +116,45 @@ class BerandaController extends Controller
                         : null,
                 ];
             })
+            ->values();
+    }
+
+    /**
+     * Buku yang sedang hangat dibicarakan pekan ini.
+     *
+     * Skornya sederhana dan jujur: gabungan unduhan dan penyimpanan tujuh
+     * hari terakhir. Dua aksi itu menyatakan dua rasa minat yang berbeda —
+     * mengambil milik sendiri, menandai untuk nanti — dan keduanya sama-sama
+     * layak menghangatkan sebuah judul.
+     *
+     * Perangkingan dikerjakan di SQL lewat ORDER BY atas alias agregat,
+     * lalu hanya segelintir baris teratas yang dihidrasi — bukan seluruh
+     * katalog. Penyaringan kehangatan nol tetap di ingatan, karena HAVING
+     * atas alias tidak portabel antara SQLite dan MySQL.
+     *
+     * @return Collection<int, Book>
+     */
+    private function sedangRamai($pengguna): Collection
+    {
+        $sejak = now()->subDays(7);
+
+        return Book::query()
+            ->terbit()
+            ->terlihatOleh($pengguna->prodi_id)
+            ->with(['category', 'prodi'])
+            ->denganStatusSimpan($pengguna)
+            ->withCount([
+                'downloadLogs as unduhan_pekan' => fn ($q) => $q->where('created_at', '>=', $sejak),
+                'tersimpanOleh as simpan_pekan' => fn ($q) => $q->where('book_saves.created_at', '>=', $sejak),
+            ])
+            ->orderByRaw('(unduhan_pekan + simpan_pekan) desc')
+            // Jauh lebih banyak dari yang tampil: baris berkehangatan nol
+            // menyusul di belakang dan disaring begitu sampai di ingatan.
+            ->take(self::BATAS_RAMAI * 5)
+            ->get()
+            ->each(fn (Book $buku) => $buku->kehangatan = $buku->unduhan_pekan + $buku->simpan_pekan)
+            ->filter(fn (Book $buku) => $buku->kehangatan > 0)
+            ->take(self::BATAS_RAMAI)
             ->values();
     }
 }

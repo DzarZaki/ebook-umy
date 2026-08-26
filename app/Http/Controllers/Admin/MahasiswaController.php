@@ -18,14 +18,17 @@ class MahasiswaController extends Controller
     {
         $dosen = $request->user();
         $cari = trim((string) $request->query('cari'));
+        // Wildcard LIKE dari pengguna dibuang, alasan yang sama dengan
+        // pencarian katalog: portabel di SQLite maupun MySQL.
+        $istilah = str_replace(['%', '_'], '', $cari);
 
         $daftarMahasiswa = User::query()
             ->where('role', User::ROLE_MAHASISWA)
             ->where('prodi_id', $dosen->prodi_id)
-            ->when($cari !== '', function ($kueri) use ($cari) {
-                $kueri->where(function ($bagian) use ($cari) {
-                    $bagian->where('name', 'like', '%'.$cari.'%')
-                        ->orWhere('email', 'like', '%'.$cari.'%');
+            ->when($istilah !== '', function ($kueri) use ($istilah) {
+                $kueri->where(function ($bagian) use ($istilah) {
+                    $bagian->where('name', 'like', '%'.$istilah.'%')
+                        ->orWhere('email', 'like', '%'.$istilah.'%');
                 });
             })
             ->orderBy('name')
@@ -79,9 +82,25 @@ class MahasiswaController extends Controller
             'prodi_id' => (int) $data['prodi_id'],
         ]);
 
+        /*
+         * Surel baru belum terbukti kepemilikannya siapa pun, jadi bukti
+         * lamanya dibatalkan dan tautan verifikasi dikirim ulang — aturan
+         * yang sama dengan ProfileController::update(). Tanpa ini, akun
+         * tetap berstatus "terverifikasi" atas alamat yang tidak pernah
+         * dikonfirmasi, lalu tautan lupa sandi mengalir ke kotak itu.
+         */
+        if ($mahasiswa->wasChanged('email')) {
+            $mahasiswa->forceFill(['email_verified_at' => null])->save();
+            $mahasiswa->sendEmailVerificationNotification();
+        }
+
         $pesan = $pindahProdi
             ? "Data {$mahasiswa->name} berhasil diperbarui. Akun ini kini berada di program studi lain, sehingga tidak lagi muncul pada daftar Anda."
             : "Data {$mahasiswa->name} berhasil diperbarui.";
+
+        if ($mahasiswa->wasChanged('email')) {
+            $pesan .= ' Tautan verifikasi telah dikirim ke surel barunya.';
+        }
 
         return redirect()
             ->route('admin.mahasiswa.index')

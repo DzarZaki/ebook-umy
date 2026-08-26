@@ -28,18 +28,21 @@
                     </p>
                 </div>
 
+                {{-- dt lebih dulu di DOM agar screen reader membaca label
+                    sebelum angkanya; flex-col-reverse menjaga tampilan
+                    angka-besar-di-atas seperti semula. --}}
                 <dl class="flex gap-8 lg:gap-10">
-                    <div>
+                    <div class="flex flex-col-reverse">
+                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Buku<br>tersimpan</dt>
                         <dd class="font-display text-4xl font-semibold leading-none text-netral-900 dark:text-netral-50 sm:text-5xl">
                             {{ str_pad($tersimpan->total(), 2, '0', STR_PAD_LEFT) }}
                         </dd>
-                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Buku<br>tersimpan</dt>
                     </div>
-                    <div class="border-l border-netral-200 dark:border-arang-600 pl-8 lg:pl-10">
+                    <div class="flex flex-col-reverse border-l border-netral-200 dark:border-arang-600 pl-8 lg:pl-10">
+                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Halaman<br>ditandai</dt>
                         <dd class="font-display text-4xl font-semibold leading-none text-netral-900 dark:text-netral-50 sm:text-5xl">
                             {{ str_pad($jumlahHalamanDitandai, 2, '0', STR_PAD_LEFT) }}
                         </dd>
-                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Halaman<br>ditandai</dt>
                     </div>
                 </dl>
             </div>
@@ -54,14 +57,14 @@
             <a href="{{ route('koleksi.index') }}"
                @if ($tab === 'tersimpan') aria-current="page" @endif
                @class([
-                   'group -mb-px cursor-pointer border-b-2 py-5 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600',
+                   'group -mb-px cursor-pointer border-b-2 py-4 sm:py-5 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600',
                    'border-jingga-600 dark:border-jingga-400' => $tab === 'tersimpan',
                    'border-transparent hover:border-netral-300 dark:hover:border-arang-500' => $tab !== 'tersimpan',
                ])>
                 <span @class([
-                    'block font-display text-lg transition-colors duration-150 motion-reduce:transition-none',
+                    'block font-display text-base sm:text-lg transition-colors duration-150 motion-reduce:transition-none',
                     'text-jingga-600 dark:text-jingga-400' => $tab === 'tersimpan',
-                    'text-netral-400 dark:text-netral-300 group-hover:text-netral-600 dark:group-hover:text-netral-100' => $tab !== 'tersimpan',
+                    'text-netral-400 dark:text-netral-400 group-hover:text-netral-600 dark:group-hover:text-netral-100' => $tab !== 'tersimpan',
                 ])>01</span>
                 <span @class([
                     'mt-1 block text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none',
@@ -69,21 +72,21 @@
                     'text-netral-500 dark:text-netral-400 group-hover:text-netral-700 dark:group-hover:text-netral-200' => $tab !== 'tersimpan',
                 ])>
                     Tersimpan
-                    <span class="font-normal text-netral-400">({{ $tersimpan->total() }})</span>
+                    <span class="font-normal text-netral-400 dark:text-netral-400">({{ $tersimpan->total() }})</span>
                 </span>
             </a>
 
             <a href="{{ route('koleksi.index', ['tab' => 'penanda']) }}"
                @if ($tab === 'penanda') aria-current="page" @endif
                @class([
-                   'group -mb-px cursor-pointer border-b-2 py-5 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600',
+                   'group -mb-px cursor-pointer border-b-2 py-4 sm:py-5 focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-600',
                    'border-jingga-600 dark:border-jingga-400' => $tab === 'penanda',
                    'border-transparent hover:border-netral-300 dark:hover:border-arang-500' => $tab !== 'penanda',
                ])>
                 <span @class([
-                    'block font-display text-lg transition-colors duration-150 motion-reduce:transition-none',
+                    'block font-display text-base sm:text-lg transition-colors duration-150 motion-reduce:transition-none',
                     'text-jingga-600 dark:text-jingga-400' => $tab === 'penanda',
-                    'text-netral-400 dark:text-netral-300 group-hover:text-netral-600 dark:group-hover:text-netral-100' => $tab !== 'penanda',
+                    'text-netral-400 dark:text-netral-400 group-hover:text-netral-600 dark:group-hover:text-netral-100' => $tab !== 'penanda',
                 ])>02</span>
                 <span @class([
                     'mt-1 block text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none',
@@ -91,18 +94,18 @@
                     'text-netral-500 dark:text-netral-400 group-hover:text-netral-700 dark:group-hover:text-netral-200' => $tab !== 'penanda',
                 ])>
                     Penanda halaman
-                    <span class="font-normal text-netral-400">({{ $jumlahBukuBerpenanda }})</span>
+                    <span class="font-normal text-netral-400 dark:text-netral-400">({{ $jumlahBukuBerpenanda }})</span>
                 </span>
             </a>
         </div>
     </nav>
 
-    <section class="bg-transparent py-12 sm:py-16">
+    <section class="bg-transparent py-10 sm:py-16">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
             {{-- Pesan hasil menyimpan/melepas buku. --}}
             @if (session('status'))
-                <div class="mb-10 border-l-2 border-jingga-600 dark:border-jingga-500 bg-jingga-50 dark:bg-jingga-900/30 px-4 py-3 text-sm text-jingga-800 dark:text-jingga-300"
+                <div class="mb-8 rounded-lg border border-jingga-200 dark:border-jingga-700/50 bg-jingga-50/90 dark:bg-jingga-900/30 px-4 py-3 text-sm font-medium text-jingga-800 dark:text-jingga-300 shadow-sm"
                      role="status">
                     {{ session('status') }}
                 </div>

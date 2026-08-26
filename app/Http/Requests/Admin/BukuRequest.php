@@ -108,6 +108,17 @@ abstract class BukuRequest extends FormRequest
         if (! $bukuUmum && $kategori->isUmum()) {
             $validator->errors()->add('category_id', 'Buku berlingkup program studi hanya boleh memakai kategori program studi.');
         }
+
+        /*
+         * Buku prodi wajib memakai kategori milik prodinya sendiri.
+         * Aturan kompatibilitas di atas masih menerima kategori prodi
+         * MANA PUN; menu pilihan memang sudah disaring, tetapi kiriman
+         * yang dipoles tetap bisa menyelundupkan kategori prodi lain.
+         */
+        if (! $bukuUmum && ! $kategori->isUmum()
+            && (int) $kategori->prodi_id !== (int) $this->user()?->prodi_id) {
+            $validator->errors()->add('category_id', 'Kategori yang dipilih bukan milik program studi Anda.');
+        }
     }
 
     /** Rentang halaman wajib masuk akal dan tidak melebihi isi PDF. */

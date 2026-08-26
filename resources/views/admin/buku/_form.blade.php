@@ -1,7 +1,10 @@
 {{-- Bidang isian buku. Variabel $buku boleh null saat menambah data baru. --}}
 @php($buku = $buku ?? null)
 
-<div x-data="{ mode: '{{ old('access_mode', $buku->access_mode ?? 'readonly') }}' }">
+{{-- Nilai lama dimasukkan sebagai JSON (@js), bukan string mentah: kiriman
+     yang gagal validasi boleh berisi karakter apa pun, dan HTML-escape saja
+     tidak melindungi konteks JavaScript yang dievaluasi Alpine. --}}
+<div x-data="{ mode: @js(old('access_mode', $buku->access_mode ?? 'readonly')) }">
 
     <div>
         <x-input-label for="title" value="Judul Buku" />

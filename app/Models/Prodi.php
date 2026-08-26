@@ -16,6 +16,8 @@ use Illuminate\Support\Str;
  * @property string $slug
  * @property string|null $access_code
  * @property bool $download_enabled
+ * @property bool $baca_stempel
+ * @property bool $baca_ikuti_rentang
  */
 class Prodi extends Model
 {
@@ -35,6 +37,8 @@ class Prodi extends Model
         'name',
         'slug',
         'download_enabled',
+        'baca_stempel',
+        'baca_ikuti_rentang',
         'access_code',
     ];
 
@@ -47,6 +51,8 @@ class Prodi extends Model
     {
         return [
             'download_enabled' => 'boolean',
+            'baca_stempel' => 'boolean',
+            'baca_ikuti_rentang' => 'boolean',
         ];
     }
 

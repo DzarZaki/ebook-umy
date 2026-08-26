@@ -35,7 +35,7 @@ class Book extends Model
         'prodi_id', 'category_id', 'uploaded_by',
         'file_path', 'file_size', 'page_count', 'cover_path',
         'access_mode', 'download_page_start', 'download_page_end',
-        'watermark_enabled', 'is_published',
+        'watermark_enabled', 'is_published', 'search_text',
     ];
 
     /**
@@ -47,6 +47,10 @@ class Book extends Model
             'watermark_enabled' => 'boolean',
             'is_published' => 'boolean',
             'file_size' => 'integer',
+            // Tanpa cast ini, perbandingan ketat terhadap int (mis. pada
+            // ebook:perbaiki-halaman) gagal di driver PDO yang mengembalikan
+            // kolom integer sebagai string.
+            'page_count' => 'integer',
         ];
     }
 
@@ -126,6 +130,34 @@ class Book extends Model
     public function ukuranMb(): float
     {
         return round($this->file_size / 1048576, 1);
+    }
+
+    /**
+     * Potongan isi di sekitar istilah yang cocok, untuk hasil pencarian.
+     *
+     * Menjawab pertanyaan "mengapa buku ini muncul?" ketika yang cocok
+     * adalah isinya, bukan judul maupun penulisnya. Pencarian huruf besar-
+     * kecil mengikuti perilaku LIKE basis data; potongan memakai pencarian
+     * tak-peka-huruf agar keduanya tidak pernah berbeda pendapat.
+     */
+    public function potonganCocok(string $istilah, int $panjang = 180): ?string
+    {
+        if ($this->search_text === null || trim($istilah) === '') {
+            return null;
+        }
+
+        $posisi = mb_stripos($this->search_text, $istilah);
+
+        if ($posisi === false) {
+            return null;
+        }
+
+        $awal = max(0, $posisi - 50);
+        $potongan = mb_substr($this->search_text, $awal, $panjang);
+
+        return ($awal > 0 ? '…' : '')
+            .$potongan
+            .(($awal + $panjang) < mb_strlen($this->search_text) ? '…' : '');
     }
 
     /** Alamat gambar sampul, atau null bila buku tidak punya sampul. */
@@ -265,7 +297,7 @@ class Book extends Model
      * Apakah dosen tertentu boleh mengubah/menghapus buku ini?
      * Aturan sama seperti kategori.
      */
-        /**
+    /**
      * Apakah dosen tertentu boleh mengubah/menghapus buku ini?
      * Aturan sama seperti kategori.
      */

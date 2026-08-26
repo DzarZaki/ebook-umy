@@ -21,7 +21,7 @@
                 {{-- Logo aplikasi, mengarah ke beranda sesuai peran pengguna. --}}
                 <div class="flex shrink-0 items-center">
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-2">
-                        <img src="{{ asset('images/logo.svg') }}" alt="Logo {{ config('app.name') }}" class="h-8 w-8">
+                        <img src="{{ asset('images/logo.svg') }}" aria-hidden="true" alt="" class="h-8 w-8">
                         <span class="font-display text-lg font-semibold whitespace-nowrap text-netral-900 dark:text-netral-50">
                             {{ config('app.name') }}
                         </span>
@@ -44,7 +44,7 @@
                         </x-nav-link>
                     @endif
 
-                    {{-- Menu Dosen: koleksi, kategori, statistik, mahasiswa, dan katalog. --}}
+                    {{-- Menu Dosen: koleksi, kategori, statistik, mahasiswa, profil dosen, dan katalog. --}}
                     @if (auth()->user()->isAdmin())
                         <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
                             Beranda
@@ -60,6 +60,9 @@
                         </x-nav-link>
                         <x-nav-link :href="route('admin.mahasiswa.index')" :active="request()->routeIs('admin.mahasiswa.*')">
                             Mahasiswa
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.profil-dosen.edit')" :active="request()->routeIs('admin.profil-dosen.*')">
+                            Profil Dosen
                         </x-nav-link>
                         <x-nav-link :href="route('katalog.index')" :active="request()->routeIs('katalog.*')">
                             Katalog
@@ -203,6 +206,9 @@
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.mahasiswa.index')" :active="request()->routeIs('admin.mahasiswa.*')">
                     Mahasiswa
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('admin.profil-dosen.edit')" :active="request()->routeIs('admin.profil-dosen.*')">
+                    Profil Dosen
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('katalog.index')" :active="request()->routeIs('katalog.*')">
                     Katalog

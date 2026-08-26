@@ -42,8 +42,10 @@ class ProdiController extends Controller
 
         Prodi::create([
             'name' => $nama,
-            'slug' => Str::slug($nama),
+            'slug' => $this->slugUnik($nama),
         ]);
+
+        $this->lupakanCacheBeranda();
 
         return redirect()
             ->route('superadmin.prodi.index')
@@ -67,8 +69,10 @@ class ProdiController extends Controller
 
         $prodi->update([
             'name' => $nama,
-            'slug' => Str::slug($nama),
+            'slug' => $this->slugUnik($nama, $prodi->id),
         ]);
+
+        $this->lupakanCacheBeranda();
 
         return redirect()
             ->route('superadmin.prodi.index')
@@ -102,8 +106,42 @@ class ProdiController extends Controller
 
         $prodi->delete();
 
+        $this->lupakanCacheBeranda();
+
         return redirect()
             ->route('superadmin.prodi.index')
             ->with('status', 'Program studi berhasil dihapus.');
+    }
+
+    /**
+     * Menghasilkan slug unik global (kolom prodi.slug ber-indeks unik).
+     *
+     * Dua nama yang berbeda bisa runtuh menjadi slug yang sama — "Sains
+     * Data" dan "sains data", atau spasi ganda mana pun, karena validasi
+     * nama hanya membatasi huruf dan spasi. Tanpa penomoran ulang ini,
+     * tabrakan berujung galat indeks unik mentah di layar Super Admin.
+     */
+    private function slugUnik(string $nama, ?int $abaikanId = null): string
+    {
+        $dasar = Str::slug($nama) ?: 'prodi';
+        $kandidat = $dasar;
+        $n = 2;
+
+        while (
+            Prodi::where('slug', $kandidat)
+                ->when($abaikanId, fn ($q) => $q->where('id', '!=', $abaikanId))
+                ->exists()
+        ) {
+            $kandidat = "{$dasar}-{$n}";
+            $n++;
+        }
+
+        return $kandidat;
+    }
+
+    /** Halaman depan publik menyimpan daftar prodi; buang agar segar kembali. */
+    private function lupakanCacheBeranda(): void
+    {
+        cache()->forget('beranda.daftar-prodi');
     }
 }

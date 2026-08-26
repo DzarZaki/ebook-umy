@@ -2,7 +2,7 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 import './animasi';
 import './pwa';
-import './card-tilt';
+import './unggah-buku';
 
 // Inisialisasi Tema (Terang / Gelap / Sistem)
 Alpine.store('theme', {
@@ -38,6 +38,48 @@ Alpine.store('theme', {
         }
     }
 });
+
+// Data Alpine bersama untuk seluruh modal konfirmasi rumah:
+// fokus dipindahkan ke dalam panel saat terbuka, dikelilingi Tab
+// (tidak bocor ke halaman di belakang overlay), dan dikembalikan
+// ke tombol pemicunya saat ditutup.
+Alpine.data('modalFokus', () => ({
+    terbuka: false,
+    pemicu: null,
+
+    buka() {
+        this.pemicu = document.activeElement;
+        this.terbuka = true;
+        this.$nextTick(() => this.$root.querySelector('[data-panel-fokus]')?.focus());
+    },
+
+    tutup() {
+        if (!this.terbuka) return;
+        this.terbuka = false;
+        this.pemicu?.focus?.();
+        this.pemicu = null;
+    },
+
+    jagaTab(peristiwa) {
+        if (peristiwa.key !== 'Tab') return;
+
+        const milik = [...this.$root.querySelectorAll(
+            'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )];
+        if (!milik.length) return;
+
+        const pertama = milik[0];
+        const terakhir = milik[milik.length - 1];
+
+        if (peristiwa.shiftKey && document.activeElement === pertama) {
+            peristiwa.preventDefault();
+            terakhir.focus();
+        } else if (!peristiwa.shiftKey && document.activeElement === terakhir) {
+            peristiwa.preventDefault();
+            pertama.focus();
+        }
+    },
+}));
 
 // PEMANGKAS BERKAS UTAMA
 // pdf.js dan pdf-lib adalah ±80% dari 583 kB berkas JS utama, padahal hanya

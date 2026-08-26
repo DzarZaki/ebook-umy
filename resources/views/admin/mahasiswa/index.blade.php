@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-display text-xl font-semibold text-netral-900 dark:text-netral-50">Mahasiswa Program Studi</h2>
+        <h1 class="font-display text-xl font-semibold text-netral-900 dark:text-netral-50">Mahasiswa Program Studi</h1>
     </x-slot>
 
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -21,7 +21,7 @@
             @endif
         </form>
 
-        <div class="border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700/50 rounded-lg overflow-hidden shadow-sm dark:shadow-none transition-colors">
+        <div class="border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700/50 rounded-lg overflow-x-auto shadow-sm dark:shadow-none transition-colors">
             <table class="w-full text-sm">
                 <thead class="border-b border-netral-200 dark:border-arang-600 bg-netral-50 dark:bg-arang-700 text-left text-xs uppercase tracking-wide text-netral-600 dark:text-netral-400">
                     <tr>

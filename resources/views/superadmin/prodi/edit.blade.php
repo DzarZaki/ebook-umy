@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">Ubah Program Studi</h2>
+        <h1 class="text-xl font-semibold leading-tight text-netral-900 dark:text-netral-50">Ubah Program Studi</h1>
     </x-slot>
 
     <div class="py-10">

@@ -10,7 +10,10 @@ use Illuminate\Http\RedirectResponse;
 class VerifyEmailController extends Controller
 {
     /**
-     * Mark the authenticated user's email address as verified.
+     * Menandai surel pengguna yang sedang masuk sebagai terverifikasi.
+     *
+     * Permintaannya dijaga tanda tangan URL oleh middleware `signed`,
+     * sehingga tautan palsu tidak akan pernah sampai ke sini.
      */
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
     {

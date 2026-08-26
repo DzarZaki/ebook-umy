@@ -18,8 +18,14 @@ class PdfHelper
 {
     private const CHUNK = 65536; // 64 KB
 
-    /** Panjang sisa potongan yang disimpan untuk menjembatani batas chunk. */
-    private const TUMPANG = 20;
+    /**
+     * Panjang sisa potongan yang disimpan untuk menjembatani batas chunk.
+     *
+     * Wajib lebih panjang daripada pola pencarian terpanjang. Pola di bawah
+     * dibatasi \s{0,32} sehingga tak pernah melebihi ±43 byte; jendela ini
+     * menampungnya dengan aman.
+     */
+    private const TUMPANG = 64;
 
     /** Menghitung jumlah halaman PDF tanpa memuat seluruh berkas ke memori. */
     public static function hitungHalaman(string $jalur): ?int
@@ -157,7 +163,10 @@ class PdfHelper
                 $gabung = $sisa.$potongan;
                 $panjangSisa = strlen($sisa);
 
-                if (preg_match_all('/\/Type\s*\/Page[^s]/', $gabung, $cocok, PREG_OFFSET_CAPTURE)) {
+                // \s dibatasi: pola tanpa batas bisa membentang lebih panjang
+                // dari jendela tumpang-tindih dan luput terhitung saat ia
+                // membelah batas dua potongan.
+                if (preg_match_all('/\/Type\s{0,32}\/Page[^s]/', $gabung, $cocok, PREG_OFFSET_CAPTURE)) {
                     foreach ($cocok[0] as [$teks, $posisi]) {
                         // Berakhir sebelum batas sisa berarti pola itu utuh di
                         // dalam potongan sebelumnya, dan sudah ikut dihitung.

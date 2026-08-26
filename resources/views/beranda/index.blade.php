@@ -42,21 +42,36 @@
                             Rak pribadi Anda. Pengelolaan buku ada di menu Kelola.
                         @endif
                     </p>
+
+                    {{-- Pintu aktif: cari judul, penulis, sampai isi buku. --}}
+                    <form action="{{ route('katalog.index') }}" method="GET" role="search"
+                          class="mt-8 flex max-w-md items-stretch gap-2" data-muncul data-tunda="120">
+                        <label for="cari-cepat" class="sr-only">Cari buku</label>
+                        <x-text-input id="cari-cepat" name="q" type="search"
+                                      placeholder="Cari judul, penulis, atau isinya…"
+                                      class="block w-full" />
+                        <button type="submit"
+                                class="shrink-0 rounded-md bg-jingga-600 dark:bg-jingga-500 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-jingga-700 dark:hover:bg-jingga-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2">
+                            Cari
+                        </button>
+                    </form>
                 </div>
 
-                {{-- Pencacahan. Angka besar, label kecil, garis rambut. --}}
+                {{-- Pencacahan. Angka besar, label kecil, garis rambut.
+                    dt didahulukan di DOM untuk urutan screen reader;
+                    flex-col-reverse mempertahankan angka di atas. --}}
                 <dl class="flex shrink-0 gap-8 lg:gap-10" data-muncul data-tunda="180">
-                    <div>
+                    <div class="flex flex-col-reverse">
+                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Di rak Anda</dt>
                         <dd class="font-display text-4xl font-semibold leading-none text-netral-900 dark:text-netral-50 sm:text-5xl">
                             {{ str_pad($terbaru->count() + $tersimpan->count(), 2, '0', STR_PAD_LEFT) }}
                         </dd>
-                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Di rak Anda</dt>
                     </div>
-                    <div class="border-l border-netral-200 dark:border-arang-600 pl-8 lg:pl-10">
+                    <div class="flex flex-col-reverse border-l border-netral-200 dark:border-arang-600 pl-8 lg:pl-10">
+                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Sedang dibaca</dt>
                         <dd class="font-display text-4xl font-semibold leading-none text-netral-900 dark:text-netral-50 sm:text-5xl">
                             {{ str_pad($lanjutkan->count(), 2, '0', STR_PAD_LEFT) }}
                         </dd>
-                        <dt class="mt-2 text-label font-semibold uppercase text-netral-500">Sedang dibaca</dt>
                     </div>
                 </dl>
             </div>
@@ -157,7 +172,104 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
+    @endif
+
+    {{-- =====================================================================
+         STRIP LANJUTKAN — sisa bacaan setengah jalan selain hero.
+         Setiap kartu mendarat tepat di halaman terakhir lewat ?halaman=.
+         ===================================================================== --}}
+    @php($lanjutanSisa = $lanjutkan->slice(1)->take(3)->values())
+    @if ($lanjutanSisa->isNotEmpty())
+        <section aria-label="Lanjutkan bacaan lainnya"
+                 class="border-b border-netral-200 dark:border-arang-600 bg-white/50 dark:bg-arang-800/40 transition-colors">
+            <div class="mx-auto flex max-w-7xl flex-wrap gap-3 px-4 py-5 sm:px-6 lg:px-8">
+                @foreach ($lanjutanSisa as $bacaan)
+                    <a href="{{ route('katalog.baca', ['buku' => $bacaan['buku'], 'halaman' => $bacaan['halaman']]) }}"
+                       class="group flex min-w-[240px] flex-1 cursor-pointer items-center gap-3 rounded-lg border border-netral-200 dark:border-arang-600 bg-white dark:bg-arang-700/60 px-4 py-3 shadow-sm transition-colors duration-150 hover:border-jingga-400 dark:hover:border-jingga-500 sm:flex-none sm:basis-[calc(33%-0.5rem)] focus:outline-none focus-visible:ring-2 focus-visible:ring-jingga-600 focus-visible:ring-offset-2">
+
+                        {{-- Ring kemajuan --}}
+                        <svg viewBox="0 0 36 36" class="h-9 w-9 shrink-0 -rotate-90" role="img"
+                             aria-label="Terbaca {{ $bacaan['persen'] ?? 0 }} persen">
+                            <circle cx="18" cy="18" r="15.5" fill="none" stroke-width="3"
+                                    class="stroke-netral-200 dark:stroke-arang-600" />
+                            <circle cx="18" cy="18" r="15.5" fill="none" stroke-width="3" stroke-linecap="round"
+                                    stroke-dasharray="{{ round(2 * M_PI * 15.5, 1) }}"
+                                    stroke-dashoffset="{{ round(2 * M_PI * 15.5 * (1 - ($bacaan['persen'] ?? 0) / 100), 1) }}"
+                                    class="stroke-jingga-600 transition-[stroke-dashoffset] duration-700 ease-kertas dark:stroke-jingga-400" />
+                        </svg>
+
+                        <span class="min-w-0">
+                            <span class="block truncate text-sm font-semibold text-netral-900 dark:text-netral-50 group-hover:text-jingga-700 dark:group-hover:text-jingga-400">
+                                {{ $bacaan['buku']->title }}
+                            </span>
+                            <span class="block text-xs text-netral-500 dark:text-netral-400">
+                                Hal. {{ $bacaan['halaman'] }}{{ $bacaan['total'] ? ' dari '.$bacaan['total'] : '' }}
+                                &middot; {{ $bacaan['persen'] ?? 0 }}%
+                            </span>
+                        </span>
+                    </a>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    {{-- =====================================================================
+         SEDANG RAMAI — koleksi terhangat prodi pekan ini.
+         Skor gabungan unduhan dan penyimpanan tujuh hari terakhir:
+         bukti sosial bahwa rak ini hidup dipakai teman seangkatan.
+         ===================================================================== --}}
+    @if ($ramai->isNotEmpty())
+        <section class="border-b border-netral-200 dark:border-arang-600 bg-white/30 dark:bg-arang-700/20 py-14 sm:py-20 transition-colors">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="mb-8 flex flex-wrap items-end justify-between gap-4" data-muncul>
+                    <div>
+                        <p class="text-label font-semibold uppercase text-jingga-600 dark:text-jingga-400">Rak 01</p>
+                        <h2 class="mt-2 text-judul text-netral-900 dark:text-netral-50">Sedang ramai</h2>
+                        <p class="mt-1 text-sm text-netral-500 dark:text-netral-400">
+                            Paling banyak diunduh dan disimpan tujuh hari terakhir.
+                        </p>
+                    </div>
+                </div>
+
+                <ol class="grid gap-px overflow-hidden rounded-lg border border-netral-200 dark:border-arang-600 bg-netral-200 dark:bg-arang-600 shadow-sm dark:shadow-none sm:grid-cols-2 lg:grid-cols-3" data-muncul>
+                    @foreach ($ramai as $urut => $buku)
+                        <li class="group flex items-center gap-4 bg-white p-5 dark:bg-arang-700/80 transition-colors">
+                            <span class="w-7 shrink-0 font-display text-xl text-netral-300 dark:text-netral-500">
+                                {{ str_pad($urut + 1, 2, '0', STR_PAD_LEFT) }}
+                            </span>
+
+                            <a href="{{ route('katalog.show', $buku) }}" tabindex="-1" aria-hidden="true"
+                               class="h-16 w-12 shrink-0 overflow-hidden rounded-sm border border-netral-200 dark:border-arang-600 bg-netral-100 dark:bg-arang-800">
+                                @if ($buku->coverUrl())
+                                    <img src="{{ $buku->coverUrl() }}" alt="" loading="lazy" decoding="async"
+                                         class="h-full w-full object-cover">
+                                @else
+                                    <span class="flex h-full w-full items-center justify-center font-display text-lg font-semibold text-jingga-600 dark:text-jingga-400">
+                                        {{ $buku->inisial() }}
+                                    </span>
+                                @endif
+                            </a>
+
+                            <div class="min-w-0 flex-1">
+                                <h3 class="truncate text-sm font-semibold text-netral-900 dark:text-netral-50">
+                                    <a href="{{ route('katalog.show', $buku) }}"
+                                       class="sapu-bawah cursor-pointer focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-jingga-500">
+                                        {{ $buku->title }}
+                                    </a>
+                                </h3>
+                                <p class="truncate text-xs text-netral-500 dark:text-netral-400">
+                                    {{ $buku->author ?: 'Tanpa penulis' }} &middot; {{ $buku->isUmum() ? 'Umum' : ($buku->prodi?->name ?? 'Umum') }}
+                                </p>
+                            </div>
+
+                            <span class="shrink-0 rounded bg-jingga-50 dark:bg-jingga-900/30 px-2 py-1 text-xs font-semibold text-jingga-700 dark:text-jingga-300">
+                                {{ $buku->kehangatan }}&times;
+                            </span>
+                        </li>
+                    @endforeach
+                </ol>
+            </div>
         </section>
     @endif
 
@@ -171,7 +283,7 @@
                 <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
                     <div data-muncul>
                         <p class="text-label font-semibold uppercase text-netral-500 dark:text-netral-400">
-                            Rak 01
+                            Rak 02
                         </p>
                         <h2 class="mt-2 text-judul text-netral-900 dark:text-netral-50">
                             Koleksi Saya
@@ -264,7 +376,7 @@
 
                 <div class="mb-8 flex flex-wrap items-end justify-between gap-4" data-muncul>
                     <div>
-                        <p class="text-label font-semibold uppercase text-netral-500 dark:text-netral-400">Rak 02</p>
+                        <p class="text-label font-semibold uppercase text-netral-500 dark:text-netral-400">Rak 03</p>
                         <h2 class="mt-2 text-judul text-netral-900 dark:text-netral-50">
                             Baru ditambahkan
                             <span class="angka-tepi ml-1">({{ $terbaru->count() }})</span>

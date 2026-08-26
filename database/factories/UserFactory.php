@@ -53,22 +53,22 @@ class UserFactory extends Factory
         ]);
     }
 
-    /** Akun Super Admin, memakai email resmi kampus. */
+    /** Akun Super Admin, memakai alamat Gmail sesuai kebijakan klien. */
     public function superAdmin(): static
     {
         return $this->state(fn (array $atribut) => [
             'role' => User::ROLE_SUPERADMIN,
-            'email' => fake()->unique()->userName().'@umy.ac.id',
+            'email' => fake()->unique()->userName().'@gmail.com',
             'prodi_id' => null,
         ]);
     }
 
-    /** Akun dosen (admin prodi), memakai email resmi kampus. */
+    /** Akun dosen (admin prodi), memakai alamat Gmail sesuai kebijakan klien. */
     public function admin(?Prodi $prodi = null): static
     {
         return $this->state(fn (array $atribut) => [
             'role' => User::ROLE_ADMIN,
-            'email' => fake()->unique()->userName().'@umy.ac.id',
+            'email' => fake()->unique()->userName().'@gmail.com',
             'prodi_id' => $prodi?->id ?? Prodi::factory(),
         ]);
     }

@@ -45,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->daftarkanPembatasLaju();
+        $this->daftarkanPembatasLajuTamu();
     }
 
     /**
@@ -76,6 +77,40 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute((int) config('ebook.baca.maks_per_menit', 30))
                 ->by('baca-buku:'.$penanda);
+        });
+    }
+
+    /**
+     * Pembatas laju untuk pintu otentikasi yang terbuka bagi tamu.
+     *
+     * Kode akses prodi adalah satu-satunya gerbang pendaftaran, sehingga
+     * tanpa pembatas laju kode itu bisa ditebak paksa dari internet. Berbeda
+     * dengan unduh/baca di atas, penandaannya wajib per alamat IP karena tamu
+     * belum punya identitas akun; ambangnya dipilih cukup longgar agar
+     * manusia biasa tidak pernah merasakannya — hanya mesin yang menebak
+     * yang tertahan. Endpoint lupa sandi dibatasi serupa untuk mencegah
+     * pembanjiran surel dan sensus massal alamat email.
+     */
+    private function daftarkanPembatasLajuTamu(): void
+    {
+        RateLimiter::for('pendaftaran', function (Request $permintaan): Limit {
+            return Limit::perMinute(5)
+                ->by('pendaftaran:'.$permintaan->ip())
+                ->response(static fn () => response(
+                    'Terlalu banyak percobaan pendaftaran dari jaringan Anda. '
+                    .'Silakan coba lagi beberapa saat lagi.',
+                    429,
+                ));
+        });
+
+        RateLimiter::for('lupa-sandi', function (Request $permintaan): Limit {
+            return Limit::perMinute(5)
+                ->by('lupa-sandi:'.$permintaan->ip())
+                ->response(static fn () => response(
+                    'Terlalu banyak permintaan tautan reset kata sandi dari '
+                    .'jaringan Anda. Silakan coba lagi beberapa saat lagi.',
+                    429,
+                ));
         });
     }
 }

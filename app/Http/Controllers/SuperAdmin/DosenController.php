@@ -8,11 +8,9 @@ use App\Http\Requests\SuperAdmin\UpdateDosenRequest;
 use App\Models\Book;
 use App\Models\Prodi;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 /**
@@ -26,7 +24,11 @@ class DosenController extends Controller
     public function index(): View
     {
         return view('superadmin.dosen.index', [
+            // withCount mengisi kolom "Buku" dan menonaktifkan tombol Hapus
+            // untuk dosen yang masih menjadi pengunggah — tanpa ini angkanya
+            // selalu nol dan penjagaan hanya terasa setelah DELETE ditolak.
             'daftarDosen' => User::with('prodi')
+                ->withCount('bukuDiunggah')
                 ->where('role', User::ROLE_ADMIN)
                 ->orderBy('name')
                 ->paginate(10),
@@ -105,6 +107,18 @@ class DosenController extends Controller
 
         $user->update($perubahan);
 
+        /*
+         * Surel baru belum terbukti kepemilikannya, apa pun perannya —
+         * aturan yang sama dengan ProfileController::update(). Bukti lama
+         * dibatalkan dan tautan verifikasi dikirim ulang; akun dosen yang
+         * belum terverifikasi ikut tertahan middleware `verified` pada
+         * jalur katalog, sama seperti mahasiswa.
+         */
+        if ($user->wasChanged('email')) {
+            $user->forceFill(['email_verified_at' => null])->save();
+            $user->sendEmailVerificationNotification();
+        }
+
         return redirect()
             ->route('superadmin.dosen.index')
             ->with('status', 'Data dosen berhasil diperbarui.');
@@ -130,7 +144,7 @@ class DosenController extends Controller
 
         $this->pastikanAkunDosen($user);
 
-                /*
+        /*
          * Akun yang masih tercatat sebagai pengunggah tidak dihapus.
          *
          * Sejak books.uploaded_by memakai nullOnDelete, penghapusan akun tidak
